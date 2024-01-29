@@ -1,13 +1,8 @@
-import numpy as np
 import openai
 import pandas as pd
 import streamlit as st
-from openai import OpenAI
 import os
-import openpyxl
-from st_aggrid import AgGrid
-import matplotlib.pyplot as plt
-from streamlit_condition_tree import condition_tree, config_from_dataframe
+import streamlit_condition_tree
 import io
 import xlsxwriter
 
@@ -15,13 +10,15 @@ import xlsxwriter
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+#from scikit-learn.metrics.pairwise import cosine_similarity
+
 #from openai.embeddings_utils import cosine_similarity, get_embedding
 
 with st.sidebar:
     openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
-    "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
-    "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)"
+    "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
+    #"[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]()"
 
 def get_data():
     """
