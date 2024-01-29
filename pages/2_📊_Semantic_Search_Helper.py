@@ -1,18 +1,22 @@
-import openai
 import pandas as pd
 import streamlit as st
+from openai import OpenAI
 import os
-import streamlit_condition_tree
+
+import matplotlib.pyplot as plt
+from streamlit_condition_tree import condition_tree, config_from_dataframe
 import io
 import xlsxwriter
 
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-
 #from scikit-learn.metrics.pairwise import cosine_similarity
 
 #from openai.embeddings_utils import cosine_similarity, get_embedding
+
+st.set_page_config(page_title="Semantic Search", page_icon="📈")
+
 
 with st.sidebar:
     openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
