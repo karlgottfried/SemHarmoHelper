@@ -15,7 +15,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #from openai.embeddings_utils import cosine_similarity, get_embedding
 
-st.set_page_config(page_title="Semantic Search", page_icon="📈")
+st.set_page_config(page_title="Semantic Search Helper", page_icon="📈")
 
 
 with st.sidebar:
@@ -156,7 +156,7 @@ if 'selected_data' not in st.session_state:
 
 #############
 
-st.title("📒 Harmonisation Helper")
+st.title("📒 Semantic Search Helperr")
 #select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
 
 status_container = st.container()
@@ -270,7 +270,7 @@ with similarity_tab:
 
         with sim_container.expander("Filtering"):
             st.subheader('Initial DataFrame')
-            st.dataframe(df_sim,use_container_width=True)
+            st.dataframe(df_sim, use_container_width=True)
 
             st.subheader('Filter tree')
                 #st.subheader
@@ -282,7 +282,7 @@ with similarity_tab:
 
             st.subheader('Filtered DataFrame')
             df_filtered = df_sim.query(query_string)
-            size= len(df_filtered)
+            size = len(df_filtered)
             st.info(f"Filtered {size} elements")
 
             selection = dataframe_with_selections(df_filtered)
