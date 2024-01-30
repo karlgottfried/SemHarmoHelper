@@ -1,16 +1,16 @@
+import io
+import os
+
 import pandas as pd
 import streamlit as st
 from openai import OpenAI
-import os
-
-import matplotlib.pyplot as plt
-from streamlit_condition_tree import condition_tree, config_from_dataframe
-import io
-import xlsxwriter
-
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from streamlit_condition_tree import condition_tree, config_from_dataframe
+
+#client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
 #from scikit-learn.metrics.pairwise import cosine_similarity
 
 #from openai.embeddings_utils import cosine_similarity, get_embedding
@@ -156,7 +156,7 @@ if 'selected_data' not in st.session_state:
 
 #############
 
-st.title("📒 Semantic Search Helperr")
+st.title("📒 Semantic Search Helper")
 #select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
 
 status_container = st.container()
@@ -215,14 +215,12 @@ with embedding_tab:
             # Get data uploaded by the user
             if not openai_api_key:
                 embedding_container.info("Please add your OpenAI API key in the sidebar to continue.")
-                #embedding_container.stop()
 
             if openai_api_key:
-                os.environ["OPENAI_API_KEY"] = API
+                os.environ["OPENAI_API_KEY"] = OpenAI.API
+                df = st.session_state.data
                 df['embedding'] = df[selected_item_column].combined.apply(
                     lambda x: get_embedding(x, model='text-embedding-ada-002'))
-                # Handle the OpenAI query and display results
-                # handle_openai_query(df, column_names)
 
         if model_options == "SBERT":
             model = embedding_container.selectbox("Select a model to process",

@@ -1,27 +1,25 @@
 import pandas as pd
-import ydata_profiling
 import streamlit as st
-import json
-import numpy as np
+from ydata_profiling import ProfileReport
 from streamlit_pandas_profiling import st_profile_report
-from io import StringIO, TextIOWrapper
-import chardet
-import os
+from io import StringIO
+import json as json
 from streamlit_condition_tree import condition_tree, config_from_dataframe
 
 if 'profile' not in st.session_state:
-    st.session_state.data = None
+    st.session_state.profile = None
 if 'json_data' not in st.session_state:
-    st.session_state.embedding = None
+    st.session_state.json_data = None
+if 'data_df' not in st.session_state:
+    st.session_state.data_df = None
 
 st.set_page_config(page_title="Data Explorer", page_icon="🌍")
-st.markdown("#Basic Data Exploration")
+st.markdown("# Basic Data Exploration")
 st.sidebar.header('User Input')
-
 
 file = st.sidebar.file_uploader("Choose a file")
 
-if file != None:
+if file is not None:
     bytes_data = file.getvalue()
     string_data = StringIO(bytes_data.decode("utf-16"))
 
@@ -30,38 +28,39 @@ if file != None:
     wait_msg = 'Loading data...'
 
     if file:
-            # Check the type of file uploaded and read accordingly
+        # Check the type of file uploaded and read accordingly
         if file.name.endswith('.csv'):
-            data_df = pd.read_csv(string_data)
+            st.session_state.data_df = pd.read_csv(string_data)
         elif file.name.endswith('.xlsx') or file.name.endswith('.xls'):
-            data_df = pd.read_excel(string_data)
+            st.session_state.data_df = pd.read_excel(string_data)
         else:
-            data_df = None
+            st.session_state.data_df = None
 
     st.subheader("Overview of the uploaded data")
-    st.write(data_df)
+    st.write(st.session_state.data_df)
 
     sampling_fraction = st.slider("Select sampling fraction for report generation",
                                   min_value=0.01, max_value=1.00, value=0.05, step=0.01)
 
-    if st.button("Generate Report") :
-        sample = data_df.sample(frac=sampling_fraction)
+    if st.button("Generate Report"):
+        sample = st.session_state.data_df.sample(frac=sampling_fraction)
 
         # Erstellen des Berichts
-        description = f"Disclaimer: this profiling report was generated using a sample of {sampling_fraction * 100}% of the original dataset."
-        st.session_state.profile = sample.profile_report(dataset={"description": description}, minimal=True, progress_bar=True)
-        #profile.to_file("report.html")  # Optional: Speichern des Berichts als HTML-Datei
+        description = f"Disclaimer: this profiling report was generated using " \
+                      f"a sample of {sampling_fraction * 100}% of the original dataset."
+        st.session_state.profile = ProfileReport(sample, dataset={"description": description}, minimal=True,
+                                                 progress_bar=True, title="Profiling Report")
+
+        # profile.to_file("report.html")  # Optional: Speichern des Berichts als HTML-Datei
 
         # Konvertieren des Berichts in JSON und Laden als Python-Objekt
         json_data = st.session_state.profile.to_json()
-        st.session_state.json_data  = json.loads(json_data)
-
-
+        st.session_state.json_data = json.loads(json_data)
 
         # Anzeigen des Berichts in Streamlit (optional, falls st_profile_report verfügbar ist)
     with st.expander("View Report"):
-        st_profile_report(st.session_state.profile)
-
+        if st.session_state.profile is not None:
+            st_profile_report(st.session_state.profile)
 
     user_descriptions = {}
     with st.expander("Add Variable Description"):
@@ -72,7 +71,7 @@ if file != None:
                     "Variable": variable_name,
                     "Type": variable_info["type"],
                     "Description": "",
-                    "Alerts":variable_info["value_counts_index_sorted"]
+                    "Alerts": variable_info["value_counts_index_sorted"]
                 }
                 data.append(row)
             df = pd.DataFrame(data)
@@ -86,20 +85,17 @@ if file != None:
 
             st.subheader('Metadata View')
             df_filtered = df.query(query_string)
-            st.data_editor(df_filtered)
+            st.dataframe(df_filtered)
 
             # Button to save the descriptions back into the JSON
             if st.button("Save Descriptions"):
-                for variable in json_data:
+                for variable in st.session_state.json_data:
                     if variable in user_descriptions:
                         # Update the description in the json_structure
-                        json_data[variable] = (json_data[variable][0], user_descriptions[variable])
-
-                st.session_state.profile.load(json.dump(json_data))
+                        st.session_state.json_data[variable] = (st.session_state.json_data[variable][0],
+                                                                user_descriptions[variable])
 
                 st.success("Descriptions saved!")
 
 else:
     st.write("You did not upload the new file")
-
-
