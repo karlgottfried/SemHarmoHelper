@@ -3,15 +3,19 @@
 # Semantic Similarity Detection in Multi-Item Questionnaires with HarmoHelper
 
 ## Workflow Overview
-![Local Image](Ablauf_Harmo_Helperv2.png)
+![Local Image](Ablauf_Harmo_Helperv3.png)
 
-Workflow for detecting semantic similarities within multi-item questionnaires. The workflow initiates with the compilation of raw data, followed by the extraction of metadata. The 'Semantic Search Helper' loading the data for further processing. Step 1 involves the metadata input of sentence data from questionnaires, including variable names and text. In Step 2, embeddings are generated using transformer models such as SBERT and ADA to convert the text into numerical representations. The third step focuses on building similarity pairs, where text from different questionnaires is compared for semantic similarities, producing similarity scores. Researchers can then download these harmonization pairs for further analysis. The color-coding in the legend indicates manual, automatic, and semi-automatic processes throughout the workflow 
+The application is a first prototype for the semantic similarity detection within multi-item questionnaires. In order use the tool you need a list of questionnaires and the corresponding questions.
+Workflow for detecting semantic similarities within multi-item questionnaires. The workflow initiates with the compilation of raw data, followed by the extraction of metadata. 
+The 'Semantic Search Helper' loading the data for further processing. Step 1 involves the metadata input of sentence data from questionnaires, including variable names and text. 
+In Step 2, embeddings are generated using transformer models such as SBERT and ADA to convert the text into numerical representations. 
+The third step focuses on building similarity pairs, where text from different questionnaires is compared for semantic similarities, producing similarity scores. 
+Researchers can then download these harmonization pairs for further analysis. The color-coding in the legend indicates manual, automatic, and semi-automatic processes throughout the workflow 
 
 ## UI Overview
 ![Local Image](Combined_Harmonations_Helper_Image.png)
 
 The "Semantic Search Helper" application interface. The user interface is divided into four quadrants, each representing different phases of the harmonisation process: Data upload and selection, embedding calculation, evaluation of semantic similarity between questionnaire items and the final selection of harmonisation candidates with the option to download the results. The interface facilitates the comparison of semantic similarities between survey questions, simplifying the data harmonisation workflow for researchers.
-
 
 The code includes a Streamlit-based web app developed for analyzing text data using embeddings and similarity calculations. The app allows users to upload data, filter it, and identify relevant text pairs based on their similarity. This can speed up and facilitate the first step in data harmonization.
 

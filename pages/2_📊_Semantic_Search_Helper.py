@@ -244,7 +244,7 @@ with embedding_tab:
                                                        + str(len(st.session_state.embedding)) + " rows with a vector size of " + str(len(df_embedding.embedding[0])))
 with pair_tab:
     if st.session_state.data is None and st.session_state.embedding is None:
-        st.info('You have to select data and build embeddings for viewing similarity')
+        st.info('You have to select data and build embeddings in order to view similarity')
     else:
         pair_container = st.container()
         data = st.session_state.embedding
