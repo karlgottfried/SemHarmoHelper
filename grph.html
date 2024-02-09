@@ -1,0 +1,464 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+                <link href="lib/tom-select/tom-select.css" rel="stylesheet">
+                <script src="lib/tom-select/tom-select.complete.min.js"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Feeling hopeless about the future">Feeling hopeless about the future</option>
+                                
+                                    <option value="Feeling easily annoyed or irritated">Feeling easily annoyed or irritated</option>
+                                
+                                    <option value="I feel content">I feel content</option>
+                                
+                                    <option value="I am nervous">I am nervous</option>
+                                
+                                    <option value="Feeling tense or keyed up">Feeling tense or keyed up</option>
+                                
+                                    <option value="I am scared">I am scared</option>
+                                
+                                    <option value="Which cigarette would you hate most to give up?">Which cigarette would you hate most to give up?</option>
+                                
+                                    <option value="I feel jittery">I feel jittery</option>
+                                
+                                    <option value="I am tense">I am tense</option>
+                                
+                                    <option value="Sense of failure">Sense of failure</option>
+                                
+                                    <option value="I feel secure">I feel secure</option>
+                                
+                                    <option value="I am worried">I am worried</option>
+                                
+                                    <option value="I am content">I am content</option>
+                                
+                                    <option value="How soon after you wake up do you smoke your first cigarette?">How soon after you wake up do you smoke your first cigarette?</option>
+                                
+                                    <option value="Do you smoke more frequently during the first hours after waking up than during the rest of the day?">Do you smoke more frequently during the first hours after waking up than during the rest of the day?</option>
+                                
+                                    <option value="Do you smoke more frequently during the first hours after waking than during the rest of the day?">Do you smoke more frequently during the first hours after waking than during the rest of the day?</option>
+                                
+                                    <option value="How many cigarettes a day do you smoke?">How many cigarettes a day do you smoke?</option>
+                                
+                                    <option value="How many cigarettes do you smoke per day?">How many cigarettes do you smoke per day?</option>
+                                
+                                    <option value="Numbness or tingling in parts of your body">Numbness or tingling in parts of your body</option>
+                                
+                                    <option value="Numbness or tingling in parts of your body.">Numbness or tingling in parts of your body.</option>
+                                
+                                    <option value="Pains in heart or chest">Pains in heart or chest</option>
+                                
+                                    <option value="Pains in heart or chest.">Pains in heart or chest.</option>
+                                
+                                    <option value="Feeling weak in parts of your body">Feeling weak in parts of your body</option>
+                                
+                                    <option value="Feeling weak in parts of your body.">Feeling weak in parts of your body.</option>
+                                
+                                    <option value="Loss of sexual interest or pleasure">Loss of sexual interest or pleasure</option>
+                                
+                                    <option value="Loss of sexual interest or pleasure.">Loss of sexual interest or pleasure.</option>
+                                
+                                    <option value="Feeling trapped or caught">Feeling trapped or caught</option>
+                                
+                                    <option value="Feeling trapped or caught.">Feeling trapped or caught.</option>
+                                
+                                    <option value="Feeling everything is an effort">Feeling everything is an effort</option>
+                                
+                                    <option value="Feeling everything is an effort.">Feeling everything is an effort.</option>
+                                
+                                    <option value="Feeling hopeless about the future.">Feeling hopeless about the future.</option>
+                                
+                                    <option value="Feeling easily annoyed or irritated.">Feeling easily annoyed or irritated.</option>
+                                
+                                    <option value="Feeling dizzy or lightheaded">Feeling dizzy or lightheaded</option>
+                                
+                                    <option value="Feeling dizzy or lightheaded.">Feeling dizzy or lightheaded.</option>
+                                
+                                    <option value="Worrying too much about things">Worrying too much about things</option>
+                                
+                                    <option value="Worrying too much about different things">Worrying too much about different things</option>
+                                
+                                    <option value="Do you smoke even if you are so ill that you are in bed most of the day?">Do you smoke even if you are so ill that you are in bed most of the day?</option>
+                                
+                                    <option value="Do you smoke even when you are sick enough to be in bed most of the day?">Do you smoke even when you are sick enough to be in bed most of the day?</option>
+                                
+                                    <option value="Feeling tense or keyed up.">Feeling tense or keyed up.</option>
+                                
+                                    <option value="I feel frightened">I feel frightened</option>
+                                
+                                    <option value="I feel fearful">I feel fearful</option>
+                                
+                                    <option value="Do you ever feel guilty about your drinking?">Do you ever feel guilty about your drinking?</option>
+                                
+                                    <option value="Have you ever felt Guilty about your drinking?">Have you ever felt Guilty about your drinking?</option>
+                                
+                                    <option value="Difficulty falling or staying asleep">Difficulty falling or staying asleep</option>
+                                
+                                    <option value="Difficulty falling asleep or staying asleep.">Difficulty falling asleep or staying asleep.</option>
+                                
+                                    <option value="I feel rested and relaxed">I feel rested and relaxed</option>
+                                
+                                    <option value="I feel relaxed">I feel relaxed</option>
+                                
+                                    <option value="Becoming easily annoyed or irritable">Becoming easily annoyed or irritable</option>
+                                
+                                    <option value="Feeling that everything is an effort">Feeling that everything is an effort</option>
+                                
+                                    <option value="I feel scared">I feel scared</option>
+                                
+                                    <option value="I am afraid">I am afraid</option>
+                                
+                                    <option value="Feeling so restless you can't sit still">Feeling so restless you can't sit still</option>
+                                
+                                    <option value="Being so restless that it is hard to sit still">Being so restless that it is hard to sit still</option>
+                                
+                                    <option value="Do you find it difficult to refrain from smoking in places where it is forbidden?">Do you find it difficult to refrain from smoking in places where it is forbidden?</option>
+                                
+                                    <option value="Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?">Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?</option>
+                                
+                                    <option value="Changes in sleeping patterns">Changes in sleeping patterns</option>
+                                
+                                    <option value="Change in sleeping habits">Change in sleeping habits</option>
+                                
+                                    <option value="Numbness or tingling in fingers, toes, or face">Numbness or tingling in fingers, toes, or face</option>
+                                
+                                    <option value="Do you smoke more often in the morning than during the rest of the day?">Do you smoke more often in the morning than during the rest of the day?</option>
+                                
+                                    <option value="I am relaxed">I am relaxed</option>
+                                
+                                    <option value="Drinking alcohol helps people relax and unwind">Drinking alcohol helps people relax and unwind</option>
+                                
+                                    <option value="Drinking because it helps to relax">Drinking because it helps to relax</option>
+                                
+                                    <option value="Feeling irritable or easily angered.">Feeling irritable or easily angered.</option>
+                                
+                                    <option value="I feel satisfied">I feel satisfied</option>
+                                
+                                    <option value="I feel calm">I feel calm</option>
+                                
+                                    <option value="I am calm">I am calm</option>
+                                
+                                    <option value="Feeling nervous or tense">Feeling nervous or tense</option>
+                                
+                                    <option value="Feeling nervous or shaky inside">Feeling nervous or shaky inside</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling hopeless about the future", "label": "Feeling hopeless about the future", "shape": "dot", "title": "Feeling hopeless about the future Neighbors:\u003cbr\u003eFeeling hopeless about the future\u003cbr\u003eFeeling hopeless about the future.", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling easily annoyed or irritated", "label": "Feeling easily annoyed or irritated", "shape": "dot", "title": "Feeling easily annoyed or irritated Neighbors:\u003cbr\u003eBecoming easily annoyed or irritable\u003cbr\u003eFeeling easily annoyed or irritated\u003cbr\u003eFeeling easily annoyed or irritated.", "value": 3}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel content", "label": "I feel content", "shape": "dot", "title": "I feel content Neighbors:\u003cbr\u003eI feel satisfied\u003cbr\u003eI feel content", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am nervous", "label": "I am nervous", "shape": "dot", "title": "I am nervous Neighbors:\u003cbr\u003eI am nervous", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling tense or keyed up", "label": "Feeling tense or keyed up", "shape": "dot", "title": "Feeling tense or keyed up Neighbors:\u003cbr\u003eFeeling tense or keyed up.\u003cbr\u003eFeeling tense or keyed up", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am scared", "label": "I am scared", "shape": "dot", "title": "I am scared Neighbors:\u003cbr\u003eI am scared\u003cbr\u003eI am afraid", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Which cigarette would you hate most to give up?", "label": "Which cigarette would you hate most to give up?", "shape": "dot", "title": "Which cigarette would you hate most to give up? Neighbors:\u003cbr\u003eWhich cigarette would you hate most to give up?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel jittery", "label": "I feel jittery", "shape": "dot", "title": "I feel jittery Neighbors:\u003cbr\u003eI feel jittery", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am tense", "label": "I am tense", "shape": "dot", "title": "I am tense Neighbors:\u003cbr\u003eI am tense", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sense of failure", "label": "Sense of failure", "shape": "dot", "title": "Sense of failure Neighbors:\u003cbr\u003eSense of failure", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel secure", "label": "I feel secure", "shape": "dot", "title": "I feel secure Neighbors:\u003cbr\u003eI feel secure", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am worried", "label": "I am worried", "shape": "dot", "title": "I am worried Neighbors:\u003cbr\u003eI am worried", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am content", "label": "I am content", "shape": "dot", "title": "I am content Neighbors:\u003cbr\u003eI am content", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "How soon after you wake up do you smoke your first cigarette?", "label": "How soon after you wake up do you smoke your first cigarette?", "shape": "dot", "title": "How soon after you wake up do you smoke your first cigarette? Neighbors:\u003cbr\u003eHow soon after you wake up do you smoke your first cigarette?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you smoke more frequently during the first hours after waking up than during the rest of the day?", "label": "Do you smoke more frequently during the first hours after waking up than during the rest of the day?", "shape": "dot", "title": "Do you smoke more frequently during the first hours after waking up than during the rest of the day? Neighbors:\u003cbr\u003eDo you smoke more often in the morning than during the rest of the day?\u003cbr\u003eDo you smoke more frequently during the first hours after waking than during the rest of the day?", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you smoke more frequently during the first hours after waking than during the rest of the day?", "label": "Do you smoke more frequently during the first hours after waking than during the rest of the day?", "shape": "dot", "title": "Do you smoke more frequently during the first hours after waking than during the rest of the day? Neighbors:\u003cbr\u003eDo you smoke more often in the morning than during the rest of the day?\u003cbr\u003eDo you smoke more frequently during the first hours after waking up than during the rest of the day?", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "How many cigarettes a day do you smoke?", "label": "How many cigarettes a day do you smoke?", "shape": "dot", "title": "How many cigarettes a day do you smoke? Neighbors:\u003cbr\u003eHow many cigarettes do you smoke per day?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "How many cigarettes do you smoke per day?", "label": "How many cigarettes do you smoke per day?", "shape": "dot", "title": "How many cigarettes do you smoke per day? Neighbors:\u003cbr\u003eHow many cigarettes a day do you smoke?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Numbness or tingling in parts of your body", "label": "Numbness or tingling in parts of your body", "shape": "dot", "title": "Numbness or tingling in parts of your body Neighbors:\u003cbr\u003eNumbness or tingling in parts of your body.\u003cbr\u003eNumbness or tingling in fingers, toes, or face", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Numbness or tingling in parts of your body.", "label": "Numbness or tingling in parts of your body.", "shape": "dot", "title": "Numbness or tingling in parts of your body. Neighbors:\u003cbr\u003eNumbness or tingling in fingers, toes, or face\u003cbr\u003eNumbness or tingling in parts of your body", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pains in heart or chest", "label": "Pains in heart or chest", "shape": "dot", "title": "Pains in heart or chest Neighbors:\u003cbr\u003ePains in heart or chest.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pains in heart or chest.", "label": "Pains in heart or chest.", "shape": "dot", "title": "Pains in heart or chest. Neighbors:\u003cbr\u003ePains in heart or chest", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling weak in parts of your body", "label": "Feeling weak in parts of your body", "shape": "dot", "title": "Feeling weak in parts of your body Neighbors:\u003cbr\u003eFeeling weak in parts of your body.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling weak in parts of your body.", "label": "Feeling weak in parts of your body.", "shape": "dot", "title": "Feeling weak in parts of your body. Neighbors:\u003cbr\u003eFeeling weak in parts of your body", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Loss of sexual interest or pleasure", "label": "Loss of sexual interest or pleasure", "shape": "dot", "title": "Loss of sexual interest or pleasure Neighbors:\u003cbr\u003eLoss of sexual interest or pleasure.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Loss of sexual interest or pleasure.", "label": "Loss of sexual interest or pleasure.", "shape": "dot", "title": "Loss of sexual interest or pleasure. Neighbors:\u003cbr\u003eLoss of sexual interest or pleasure", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling trapped or caught", "label": "Feeling trapped or caught", "shape": "dot", "title": "Feeling trapped or caught Neighbors:\u003cbr\u003eFeeling trapped or caught.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling trapped or caught.", "label": "Feeling trapped or caught.", "shape": "dot", "title": "Feeling trapped or caught. Neighbors:\u003cbr\u003eFeeling trapped or caught", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling everything is an effort", "label": "Feeling everything is an effort", "shape": "dot", "title": "Feeling everything is an effort Neighbors:\u003cbr\u003eFeeling everything is an effort.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling everything is an effort.", "label": "Feeling everything is an effort.", "shape": "dot", "title": "Feeling everything is an effort. Neighbors:\u003cbr\u003eFeeling everything is an effort\u003cbr\u003eFeeling that everything is an effort", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling hopeless about the future.", "label": "Feeling hopeless about the future.", "shape": "dot", "title": "Feeling hopeless about the future. Neighbors:\u003cbr\u003eFeeling hopeless about the future", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling easily annoyed or irritated.", "label": "Feeling easily annoyed or irritated.", "shape": "dot", "title": "Feeling easily annoyed or irritated. Neighbors:\u003cbr\u003eBecoming easily annoyed or irritable\u003cbr\u003eFeeling irritable or easily angered.\u003cbr\u003eFeeling easily annoyed or irritated", "value": 3}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling dizzy or lightheaded", "label": "Feeling dizzy or lightheaded", "shape": "dot", "title": "Feeling dizzy or lightheaded Neighbors:\u003cbr\u003eFeeling dizzy or lightheaded.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling dizzy or lightheaded.", "label": "Feeling dizzy or lightheaded.", "shape": "dot", "title": "Feeling dizzy or lightheaded. Neighbors:\u003cbr\u003eFeeling dizzy or lightheaded", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Worrying too much about things", "label": "Worrying too much about things", "shape": "dot", "title": "Worrying too much about things Neighbors:\u003cbr\u003eWorrying too much about different things", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Worrying too much about different things", "label": "Worrying too much about different things", "shape": "dot", "title": "Worrying too much about different things Neighbors:\u003cbr\u003eWorrying too much about things", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you smoke even if you are so ill that you are in bed most of the day?", "label": "Do you smoke even if you are so ill that you are in bed most of the day?", "shape": "dot", "title": "Do you smoke even if you are so ill that you are in bed most of the day? Neighbors:\u003cbr\u003eDo you smoke even when you are sick enough to be in bed most of the day?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you smoke even when you are sick enough to be in bed most of the day?", "label": "Do you smoke even when you are sick enough to be in bed most of the day?", "shape": "dot", "title": "Do you smoke even when you are sick enough to be in bed most of the day? Neighbors:\u003cbr\u003eDo you smoke even if you are so ill that you are in bed most of the day?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling tense or keyed up.", "label": "Feeling tense or keyed up.", "shape": "dot", "title": "Feeling tense or keyed up. Neighbors:\u003cbr\u003eFeeling tense or keyed up", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel frightened", "label": "I feel frightened", "shape": "dot", "title": "I feel frightened Neighbors:\u003cbr\u003eI feel scared\u003cbr\u003eI feel fearful", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel fearful", "label": "I feel fearful", "shape": "dot", "title": "I feel fearful Neighbors:\u003cbr\u003eI feel scared\u003cbr\u003eI feel frightened", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you ever feel guilty about your drinking?", "label": "Do you ever feel guilty about your drinking?", "shape": "dot", "title": "Do you ever feel guilty about your drinking? Neighbors:\u003cbr\u003eHave you ever felt Guilty about your drinking?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Have you ever felt Guilty about your drinking?", "label": "Have you ever felt Guilty about your drinking?", "shape": "dot", "title": "Have you ever felt Guilty about your drinking? Neighbors:\u003cbr\u003eDo you ever feel guilty about your drinking?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Difficulty falling or staying asleep", "label": "Difficulty falling or staying asleep", "shape": "dot", "title": "Difficulty falling or staying asleep Neighbors:\u003cbr\u003eDifficulty falling asleep or staying asleep.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Difficulty falling asleep or staying asleep.", "label": "Difficulty falling asleep or staying asleep.", "shape": "dot", "title": "Difficulty falling asleep or staying asleep. Neighbors:\u003cbr\u003eDifficulty falling or staying asleep", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel rested and relaxed", "label": "I feel rested and relaxed", "shape": "dot", "title": "I feel rested and relaxed Neighbors:\u003cbr\u003eI feel relaxed", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel relaxed", "label": "I feel relaxed", "shape": "dot", "title": "I feel relaxed Neighbors:\u003cbr\u003eI feel rested and relaxed\u003cbr\u003eI am relaxed", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Becoming easily annoyed or irritable", "label": "Becoming easily annoyed or irritable", "shape": "dot", "title": "Becoming easily annoyed or irritable Neighbors:\u003cbr\u003eFeeling easily annoyed or irritated\u003cbr\u003eFeeling easily annoyed or irritated.", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling that everything is an effort", "label": "Feeling that everything is an effort", "shape": "dot", "title": "Feeling that everything is an effort Neighbors:\u003cbr\u003eFeeling everything is an effort.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel scared", "label": "I feel scared", "shape": "dot", "title": "I feel scared Neighbors:\u003cbr\u003eI feel fearful\u003cbr\u003eI feel frightened", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am afraid", "label": "I am afraid", "shape": "dot", "title": "I am afraid Neighbors:\u003cbr\u003eI am scared", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling so restless you can\u0027t sit still", "label": "Feeling so restless you can\u0027t sit still", "shape": "dot", "title": "Feeling so restless you can\u0027t sit still Neighbors:\u003cbr\u003eBeing so restless that it is hard to sit still", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Being so restless that it is hard to sit still", "label": "Being so restless that it is hard to sit still", "shape": "dot", "title": "Being so restless that it is hard to sit still Neighbors:\u003cbr\u003eFeeling so restless you can\u0027t sit still", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you find it difficult to refrain from smoking in places where it is forbidden?", "label": "Do you find it difficult to refrain from smoking in places where it is forbidden?", "shape": "dot", "title": "Do you find it difficult to refrain from smoking in places where it is forbidden? Neighbors:\u003cbr\u003eDo you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?", "label": "Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?", "shape": "dot", "title": "Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)? Neighbors:\u003cbr\u003eDo you find it difficult to refrain from smoking in places where it is forbidden?", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Changes in sleeping patterns", "label": "Changes in sleeping patterns", "shape": "dot", "title": "Changes in sleeping patterns Neighbors:\u003cbr\u003eChange in sleeping habits", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Change in sleeping habits", "label": "Change in sleeping habits", "shape": "dot", "title": "Change in sleeping habits Neighbors:\u003cbr\u003eChanges in sleeping patterns", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Numbness or tingling in fingers, toes, or face", "label": "Numbness or tingling in fingers, toes, or face", "shape": "dot", "title": "Numbness or tingling in fingers, toes, or face Neighbors:\u003cbr\u003eNumbness or tingling in parts of your body.\u003cbr\u003eNumbness or tingling in parts of your body", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Do you smoke more often in the morning than during the rest of the day?", "label": "Do you smoke more often in the morning than during the rest of the day?", "shape": "dot", "title": "Do you smoke more often in the morning than during the rest of the day? Neighbors:\u003cbr\u003eDo you smoke more frequently during the first hours after waking than during the rest of the day?\u003cbr\u003eDo you smoke more frequently during the first hours after waking up than during the rest of the day?", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am relaxed", "label": "I am relaxed", "shape": "dot", "title": "I am relaxed Neighbors:\u003cbr\u003eI feel relaxed", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Drinking alcohol helps people relax and unwind", "label": "Drinking alcohol helps people relax and unwind", "shape": "dot", "title": "Drinking alcohol helps people relax and unwind Neighbors:\u003cbr\u003eDrinking because it helps to relax", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Drinking because it helps to relax", "label": "Drinking because it helps to relax", "shape": "dot", "title": "Drinking because it helps to relax Neighbors:\u003cbr\u003eDrinking alcohol helps people relax and unwind", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling irritable or easily angered.", "label": "Feeling irritable or easily angered.", "shape": "dot", "title": "Feeling irritable or easily angered. Neighbors:\u003cbr\u003eFeeling easily annoyed or irritated.", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel satisfied", "label": "I feel satisfied", "shape": "dot", "title": "I feel satisfied Neighbors:\u003cbr\u003eI feel content", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I feel calm", "label": "I feel calm", "shape": "dot", "title": "I feel calm Neighbors:\u003cbr\u003eI am calm", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "I am calm", "label": "I am calm", "shape": "dot", "title": "I am calm Neighbors:\u003cbr\u003eI feel calm", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling nervous or tense", "label": "Feeling nervous or tense", "shape": "dot", "title": "Feeling nervous or tense Neighbors:\u003cbr\u003eFeeling nervous or shaky inside", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Feeling nervous or shaky inside", "label": "Feeling nervous or shaky inside", "shape": "dot", "title": "Feeling nervous or shaky inside Neighbors:\u003cbr\u003eFeeling nervous or tense", "value": 1}]);
+                  edges = new vis.DataSet([{"from": "Feeling hopeless about the future", "to": "Feeling hopeless about the future", "value": 1.0000007152557373}, {"from": "Feeling easily annoyed or irritated", "to": "Feeling easily annoyed or irritated", "value": 1.0000003576278687}, {"from": "I feel content", "to": "I feel content", "value": 1.0000003576278687}, {"from": "I am nervous", "to": "I am nervous", "value": 1.0000003576278687}, {"from": "Feeling tense or keyed up", "to": "Feeling tense or keyed up", "value": 1.000000238418579}, {"from": "I am scared", "to": "I am scared", "value": 1.000000238418579}, {"from": "Which cigarette would you hate most to give up?", "to": "Which cigarette would you hate most to give up?", "value": 1.000000238418579}, {"from": "I feel jittery", "to": "I feel jittery", "value": 1.0000001192092896}, {"from": "I am tense", "to": "I am tense", "value": 1.0}, {"from": "Sense of failure", "to": "Sense of failure", "value": 0.9999999403953552}, {"from": "I feel secure", "to": "I feel secure", "value": 0.9999998807907104}, {"from": "I am worried", "to": "I am worried", "value": 0.9999998211860657}, {"from": "I am content", "to": "I am content", "value": 0.9999997615814209}, {"from": "How soon after you wake up do you smoke your first cigarette?", "to": "How soon after you wake up do you smoke your first cigarette?", "value": 0.9999997615814209}, {"from": "Do you smoke more frequently during the first hours after waking up than during the rest of the day?", "to": "Do you smoke more frequently during the first hours after waking than during the rest of the day?", "value": 0.995926558971405}, {"from": "How many cigarettes a day do you smoke?", "to": "How many cigarettes do you smoke per day?", "value": 0.9940139651298523}, {"from": "Numbness or tingling in parts of your body", "to": "Numbness or tingling in parts of your body.", "value": 0.9938226342201233}, {"from": "Pains in heart or chest", "to": "Pains in heart or chest.", "value": 0.9904999136924744}, {"from": "Feeling weak in parts of your body", "to": "Feeling weak in parts of your body.", "value": 0.9889508485794067}, {"from": "Loss of sexual interest or pleasure", "to": "Loss of sexual interest or pleasure.", "value": 0.9868402481079102}, {"from": "Feeling trapped or caught", "to": "Feeling trapped or caught.", "value": 0.9858205318450928}, {"from": "Feeling everything is an effort", "to": "Feeling everything is an effort.", "value": 0.9852254986763}, {"from": "Feeling hopeless about the future", "to": "Feeling hopeless about the future.", "value": 0.9786815047264099}, {"from": "Feeling easily annoyed or irritated", "to": "Feeling easily annoyed or irritated.", "value": 0.9782498478889465}, {"from": "Feeling dizzy or lightheaded", "to": "Feeling dizzy or lightheaded.", "value": 0.9771900773048401}, {"from": "Worrying too much about things", "to": "Worrying too much about different things", "value": 0.9758885502815247}, {"from": "Do you smoke even if you are so ill that you are in bed most of the day?", "to": "Do you smoke even when you are sick enough to be in bed most of the day?", "value": 0.9757881760597229}, {"from": "Feeling tense or keyed up", "to": "Feeling tense or keyed up.", "value": 0.9678775668144226}, {"from": "I feel frightened", "to": "I feel fearful", "value": 0.9674592018127441}, {"from": "Do you ever feel guilty about your drinking?", "to": "Have you ever felt Guilty about your drinking?", "value": 0.9566410183906555}, {"from": "Difficulty falling or staying asleep", "to": "Difficulty falling asleep or staying asleep.", "value": 0.9532862305641174}, {"from": "I feel rested and relaxed", "to": "I feel relaxed", "value": 0.9490371942520142}, {"from": "Feeling easily annoyed or irritated", "to": "Becoming easily annoyed or irritable", "value": 0.9443523287773132}, {"from": "Feeling that everything is an effort", "to": "Feeling everything is an effort.", "value": 0.9409341216087341}, {"from": "I feel scared", "to": "I feel frightened", "value": 0.9396421313285828}, {"from": "I am afraid", "to": "I am scared", "value": 0.9381517171859741}, {"from": "Feeling so restless you can\u0027t sit still", "to": "Being so restless that it is hard to sit still", "value": 0.9373573064804077}, {"from": "Feeling easily annoyed or irritated.", "to": "Becoming easily annoyed or irritable", "value": 0.9365591406822205}, {"from": "Do you find it difficult to refrain from smoking in places where it is forbidden?", "to": "Do you find it difficult to refrain from smoking in places where it is forbidden (e.g. church, library, cinema, etc.)?", "value": 0.9329566359519958}, {"from": "Changes in sleeping patterns", "to": "Change in sleeping habits", "value": 0.925427258014679}, {"from": "Numbness or tingling in parts of your body.", "to": "Numbness or tingling in fingers, toes, or face", "value": 0.9220622181892395}, {"from": "Do you smoke more often in the morning than during the rest of the day?", "to": "Do you smoke more frequently during the first hours after waking than during the rest of the day?", "value": 0.9212779998779297}, {"from": "Numbness or tingling in parts of your body", "to": "Numbness or tingling in fingers, toes, or face", "value": 0.9180648326873779}, {"from": "Do you smoke more often in the morning than during the rest of the day?", "to": "Do you smoke more frequently during the first hours after waking up than during the rest of the day?", "value": 0.9178676009178162}, {"from": "I am relaxed", "to": "I feel relaxed", "value": 0.9168252944946289}, {"from": "I feel scared", "to": "I feel fearful", "value": 0.9167315363883972}, {"from": "Drinking alcohol helps people relax and unwind", "to": "Drinking because it helps to relax", "value": 0.9122413396835327}, {"from": "Feeling easily annoyed or irritated.", "to": "Feeling irritable or easily angered.", "value": 0.9093053936958313}, {"from": "I feel content", "to": "I feel satisfied", "value": 0.9092251658439636}, {"from": "I feel calm", "to": "I am calm", "value": 0.9044435620307922}, {"from": "Feeling nervous or tense", "to": "Feeling nervous or shaky inside", "value": 0.9036727547645569}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"borderWidth": 2, "borderWidthSelected": 4}, "edges": {"width": 24}, "physics": {"barnesHut": {"gravitationalConstant": -2000, "centralGravity": 0, "springLength": 60, "springConstant": 0.545, "damping": 0.1, "avoidOverlap": 0.52}, "maxVelocity:": 50, "minVelocity": 0.75, "timestep": 0.5}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

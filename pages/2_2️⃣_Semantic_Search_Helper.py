@@ -3,26 +3,23 @@ import os
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from openai import OpenAI
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from streamlit_condition_tree import condition_tree, config_from_dataframe
+from streamlit_extras.dataframe_explorer import dataframe_explorer
 
-#client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+from pyvis.network import Network
 
-#from scikit-learn.metrics.pairwise import cosine_similarity
-
-#from openai.embeddings_utils import cosine_similarity, get_embedding
-
-st.set_page_config(page_title="Semantic Search Helper", page_icon="📈")
-
+st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣")
 
 with st.sidebar:
     openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
     "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
-    #"[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]()"
+    # "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]()"
+
 
 def get_data():
     """
@@ -42,23 +39,23 @@ def get_data():
         if data_upload:
             # Check the type of file uploaded and read accordingly
             if data_upload.name.endswith('.csv'):
-                df = pd.read_csv(data_upload)
+                df_data = pd.read_csv(data_upload)
             elif data_upload.name.endswith('.xlsx') or data_upload.name.endswith('.xls'):
-                df = pd.read_excel(data_upload)
+                df_data = pd.read_excel(data_upload)
             else:
-                df = None
-            return df
+                df_data = None
+            return df_data
 
         return None
 
 
-def get_similarity_dataframe(df, cosine_sim, item_column, questionaire_column):
+def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_column):
     results = []
     with st.spinner("Building pairs"):
-        for i, row_i in enumerate(df.itertuples()):
-            questionaire_value_i = getattr(row_i, questionaire_column)
-            for j, row_j in enumerate(df.itertuples()):
-                questionaire_value_j = getattr(row_j, questionaire_column)
+        for i, row_i in enumerate(df_in.itertuples()):
+            questionaire_value_i = getattr(row_i, questionnaire_column)
+            for j, row_j in enumerate(df_in.itertuples()):
+                questionaire_value_j = getattr(row_j, questionnaire_column)
                 if j <= i or questionaire_value_i == questionaire_value_j:
                     continue
 
@@ -72,69 +69,131 @@ def get_similarity_dataframe(df, cosine_sim, item_column, questionaire_column):
                     'Similarity score': similarity_score
                 })
 
-                #parent_obj.info(f"Questionnaire '{row_i.questionnaire}', Item '{row_i.item_text}' and Questionnaire '{row_j.questionnaire}', Item '{row_j.item_text}' have similarity score: {similarity_score}\n")
-                print(len(results))
-                print(f"Questionnaire '{questionaire_value_i}', Item '{getattr(row_i, item_column)}' and Questionnaire '{questionaire_value_j}', Item '{getattr(row_i, item_column)}' have similarity score: {similarity_score}\n")
+                # parent_obj.info(f"Questionnaire '{row_i.questionnaire}', Item '{row_i.item_text}' and Questionnaire
+                # '{row_j.questionnaire}', Item '{row_j.item_text}' have similarity score: {similarity_score}\n")
+                print(f"{len(results)} pairs build!")
+
+                print(
+                    f"Questionnaire '{questionaire_value_i}', Item '{getattr(row_i, item_column)}' "
+                    f"and Questionnaire '{questionaire_value_j}', Item '{getattr(row_i, item_column)}' "
+                    f"have similarity score: {similarity_score}\n")
         results.sort(key=lambda x: x['Similarity score'], reverse=True)
     return pd.DataFrame(results)
 
 
-
-def calculate_embeddings(data, model_SBERT_name, sentences):
+def calculate_embeddings(data_in, model_sbert_name, sentences_in):
     with st.spinner(f"calculate embeddings for column {st.session_state.selected_item_column}"):
-        model = SentenceTransformer(model_SBERT_name)
-        output = model.encode(sentences=sentences,
-                              show_progress_bar=True,
-                              normalize_embeddings=True)
-        data["embedding"] = list(output)
-        return data
+        model_in = SentenceTransformer(model_sbert_name)
+        output = model_in.encode(sentences=sentences_in,
+                                 show_progress_bar=True,
+                                 normalize_embeddings=True)
+        data_in["embedding"] = list(output)
+        return data_in
 
-def calculate_similarity(data, selected_column):
+
+def calculate_similarity(data_in, selected_column):
     with st.spinner(f"calculate {selected_column}"):
-        if len(data["embedding"]) > 0:
-            cos_sim_1 = cosine_similarity(data["embedding"].tolist())
+        if len(data_in["embedding"]) > 0:
+            cos_sim_1 = cosine_similarity(data_in["embedding"].tolist())
             return cos_sim_1
 
-def get_embedding(text, model="text-embedding-ada-002"):
-   text = text.replace("\n", " ")
-   return client.embeddings.create(input = [text], model=model).data[0].embedding
+
+def get_embedding(text, model_in="text-embedding-ada-002"):
+    text = text.replace("\n", " ")
+    return client.embeddings.create(input=[text], model=model_in).data[0].embedding
 
 
-def dataframe_with_selections(df):
-    df_with_selections = df.copy()
+def dataframe_with_selections(df_in):
+    df_with_selections = df_in.copy()
     df_with_selections.insert(0, "Select", False)
 
-                # Get dataframe row-selections from user with st.data_editor
+    # Get dataframe row-selections from user with st.data_editor
     edited_df = st.data_editor(
-                    df_with_selections,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={"Select": st.column_config.CheckboxColumn(required=True)},
-                    disabled=df.columns,
-                )
+        df_with_selections,
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+        disabled=df_in.columns,
+    )
 
-                # Filter the dataframe using the temporary column, then drop the column
+    # Filter the dataframe using the temporary column, then drop the column
     selected_rows = edited_df[edited_df.Select]
     return selected_rows.drop('Select', axis=1)
 
-def add_to_selection(df):
-    st.session_state.selected_data = pd.concat([st.session_state.selected_data, df]).drop_duplicates()
 
-@st.cache_data
-def convert_df_to_excel(df):
-        if df.empty:
-            return None
-
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Sheet1')
-        output.seek(0)
-        return output.read()
+def add_to_selection(df_in):
+    st.session_state.selected_data = pd.concat([st.session_state.selected_data, df_in]).drop_duplicates()
 
 
 @st.cache_data
-def convert_df(df):
-    return df.to_csv(index=False).encode('utf-8')
+def convert_df_to_excel(df_in):
+    if df_in.empty:
+        return None
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_in.to_excel(writer, index=False, sheet_name='Sheet1')
+    output.seek(0)
+    return output.read()
+
+
+@st.cache_data
+def convert_df(df_in):
+    return df_in.to_csv(index=False).encode('utf-8')
+
+
+# Funktion zum Berechnen der Kantenbreite basierend auf dem Gewicht
+def calculate_edge_width(weight, max_width=20, min_width=1):
+    return max_width if weight == 1 else max(min_width, weight * max_width)
+
+
+def get_graph(df_in, treshold):
+  got_net = Network(height="600px", width="100%", font_color="black")
+  got_net.toggle_physics(False)
+
+# set the physics layout of the network
+  got_net.barnes_hut()
+  got_data = df_in
+
+  sources = got_data['Item 1']
+  s_label = got_data["Questionnaire 1"]
+  targets = got_data['Item 2']
+  t_label = got_data["Questionnaire 2"]
+  weights = got_data['Similarity score']
+
+  edge_data = zip(sources, s_label, targets, t_label, weights)
+
+  for e in edge_data:
+      src = e[0]
+      dst = e[2]
+      w = e[4]
+      width = calculate_edge_width(w)
+      if w > treshold:
+          got_net.add_node(src, src, title=e[1])
+          got_net.add_node(dst, dst, title=e[3])
+          got_net.add_edge(src, dst, value=w, width=width)
+
+  neighbor_map = got_net.get_adj_list()
+
+  got_net.set_options('''
+  {
+    "nodes": {
+      "borderWidth": 2,
+      "borderWidthSelected": 4
+    },
+    "interaction": {
+      "dragNodes": true
+    }
+  }
+  ''')
+
+  # add neighbor data to node hover data
+  for node in got_net.nodes:
+    #node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+    node["value"] = len(neighbor_map[node["id"]])
+
+  got_net.show("graph.html", notebook=False)
+
 
 ####################################
 
@@ -154,33 +213,41 @@ if 'selected_questionaire_column' not in st.session_state:
 if 'selected_data' not in st.session_state:
     st.session_state.selected_data = pd.DataFrame()
 
+if "df_filtered" not in st.session_state:
+    st.session_state.df_filtered = None
+
 #############
 
 st.title("📒 Semantic Search Helper")
-#select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
+# select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
 
 status_container = st.container()
 if st.session_state.data is None:
     meta_status = status_container.info('Step 1 not done yet')
 else:
     meta_status = status_container.success('Step 1 done! Data selected containing '
-                                                       + str(len(st.session_state.data)) + ' rows')
+                                           + str(len(st.session_state.data)) + ' rows')
 
 emb_status_container = st.container()
 if st.session_state.embedding is None:
     emb_status = emb_status_container.info('Step 2 not done yet')
 else:
     emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
-                                                       + str(len(st.session_state.embedding)) + ' rows')
+                                              + str(len(st.session_state.embedding)) + ' rows')
 
 sim_status_container = st.container()
 if st.session_state.similarity is None:
     sim_status = sim_status_container.info('Step 3 not done yet')
 else:
     sim_status = sim_status_container.success('Step 3 done! Similarity scores build between '
-                                                       + str(len(st.session_state.similarity)) + ' pairs')
+                                              + str(len(st.session_state.similarity)) + ' pairs')
 
-load_tab, embedding_tab, pair_tab, similarity_tab = st.tabs(['Step 1: Load Sentence Data', 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs', "Step 4: View Pairs"])
+
+
+
+
+load_tab, embedding_tab, pair_tab, similarity_tab = st.tabs(
+    ['Step 1: Load Sentence Data', 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs', "Step 4: Select and Explore Pairs"])
 
 with load_tab:
     loaded_file = get_data()
@@ -188,8 +255,8 @@ with load_tab:
         with st.expander("Show your uploaded data"):
             st.write(loaded_file)
         selected_item_column = st.selectbox("Select the columns with your sentences.", loaded_file.columns)
-        selected_questionaire_column = st.selectbox("Select the columns with your questionnaire names.", loaded_file.columns)
-
+        selected_questionaire_column = st.selectbox("Select the columns with your questionnaire names.",
+                                                    loaded_file.columns)
 
         with st.expander("Show column data"):
             st.write(loaded_file[selected_item_column].tolist())
@@ -202,15 +269,15 @@ with load_tab:
             st.session_state.selected_questionaire_column = selected_questionaire_column
             meta_status.empty()
             meta_status = status_container.success('Step 1 done! Data selected containing '
-                                                       + str(len(st.session_state.data)) + ' rows')
+                                                   + str(len(st.session_state.data)) + ' rows')
 with embedding_tab:
     if st.session_state.data is None:
         st.info('You have to select data for viewing and editing. Switch to Step 1 tab first.')
     else:
         embedding_container = st.container()
         model_options = embedding_container.radio(
-                "Data Usage", options=["ADA", "SBERT"], horizontal=True
-            )
+            "Data Usage", options=["ADA", "SBERT"], horizontal=True
+        )
         if model_options == "ADA":
             # Get data uploaded by the user
             if not openai_api_key:
@@ -220,11 +287,11 @@ with embedding_tab:
                 os.environ["OPENAI_API_KEY"] = OpenAI.API
                 df = st.session_state.data
                 df['embedding'] = df[selected_item_column].combined.apply(
-                    lambda x: get_embedding(x, model='text-embedding-ada-002'))
+                    lambda x: get_embedding(x, model_in='text-embedding-ada-002'))
 
         if model_options == "SBERT":
             model = embedding_container.selectbox("Select a model to process",
-                                 ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
+                                                  ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
 
             # model_SBERT_name = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
             selected_item_column = st.session_state.selected_item_column
@@ -236,12 +303,14 @@ with embedding_tab:
 
                 if df_embedding is not None:
                     st.write(df_embedding[[selected_item_column, "embedding"]])
-                    #if embedding_container.button("Save", type='primary',key='save_emb'):
+                    # if embedding_container.button("Save", type='primary',key='save_emb'):
                     st.session_state.embedding = df_embedding
-                    #embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
+                    # embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
                     emb_status.empty()
                     emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
-                                                       + str(len(st.session_state.embedding)) + " rows with a vector size of " + str(len(df_embedding.embedding[0])))
+                                                              + str(len(st.session_state.embedding)) +
+                                                              " rows with a vector size of " +
+                                                              str(len(df_embedding.embedding[0])))
 with pair_tab:
     if st.session_state.data is None and st.session_state.embedding is None:
         st.info('You have to select data and build embeddings in order to view similarity')
@@ -251,14 +320,16 @@ with pair_tab:
         selected_item_column = st.session_state.selected_item_column
         selected_questionaire_column = st.session_state.selected_questionaire_column
 
-        if st.button(f'Calculate Similarity for all pairs of column {selected_item_column}', type='primary', key="calc_similarity"):
+        if st.button(f'Calculate Similarity for all pairs of column {selected_item_column}', type='primary',
+                     key="calc_similarity"):
             cosine_similarity = calculate_similarity(data, selected_item_column)
-            df_sim = get_similarity_dataframe(data, cosine_similarity, selected_item_column, selected_questionaire_column)
+            df_sim = get_similarity_dataframe(data, cosine_similarity, selected_item_column,
+                                              selected_questionaire_column)
             st.session_state.similarity = df_sim
 
             sim_status.empty()
             sim_status = sim_status_container.success('Step 3 done! Similarity scores build between '
-                                                       + str(len(st.session_state.similarity)) + ' pairs')
+                                                      + str(len(st.session_state.similarity)) + ' pairs')
 with similarity_tab:
     if st.session_state.similarity is None:
         st.info('You have to select data and build embeddings for viewing similarity')
@@ -266,28 +337,21 @@ with similarity_tab:
         sim_container = st.container()
         df_sim = st.session_state.similarity
 
+
         with sim_container.expander("Filtering"):
             st.subheader('Initial DataFrame')
             st.dataframe(df_sim, use_container_width=True)
 
             st.subheader('Filter tree')
-                #st.subheader
-            st.markdown("Here you see a text")
-            config = config_from_dataframe(df_sim)
-            query_string = condition_tree(config)
-
-            st.code(query_string)
+            st.session_state.df_filtered = dataframe_explorer(df_sim, case=False)
+            st.dataframe(st.session_state.df_filtered, use_container_width=True)
 
             st.subheader('Filtered DataFrame')
-            df_filtered = df_sim.query(query_string)
-            size = len(df_filtered)
+            #df_filtered = df_sim.query(query_string)
+            size = len(st.session_state.df_filtered)
             st.info(f"Filtered {size} elements")
 
-            selection = dataframe_with_selections(df_filtered)
-            #st.subheader("Your selection:")
-            #st.dataframe(selection, use_container_width=True)
-
-            #AgGrid(df_filtered, fit_columns_on_grid_load=True)
+            selection = dataframe_with_selections(st.session_state.df_filtered)
 
             if st.button('➕ Add selected candidates to final selection'):
                 add_to_selection(selection)
@@ -295,11 +359,7 @@ with similarity_tab:
             st.divider()
             if 'selected_data' in st.session_state and not st.session_state.selected_data.empty:
                 st.subheader("Final Harmonisation Candidates")
-                st.dataframe(st.session_state.selected_data,  use_container_width=True)
-
-
-
-
+                st.dataframe(st.session_state.selected_data, use_container_width=True)
 
             csv = convert_df(st.session_state.selected_data)
             st.download_button(
@@ -317,4 +377,19 @@ with similarity_tab:
                     file_name='final_selection.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
+        with sim_container.expander("Analyse"):
+            physics = st.selectbox('Choose a Graph', ["Filter","All"])
+            treshold = st.slider("value", 0.5, 1.0, 0.1)
 
+            if st.button(f'View Graph', type='primary',
+                         key="calc_graph"):
+                with st.spinner("View Graph"):
+
+                    if physics == "All":
+                        get_graph(df_sim, treshold)
+                    if physics == "Filter":
+                        get_graph(st.session_state.df_filtered, treshold)
+
+                    HtmlFile = open("graph.html", 'r', encoding='utf-8')
+                    source_code = HtmlFile.read()
+                    components.html(source_code,  height=600)
