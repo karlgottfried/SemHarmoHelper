@@ -1,10 +1,14 @@
 import io
-import os
+import time
 
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from openai import OpenAI
+
+from sklearn.manifold import TSNE
+import numpy as np
+from ast import literal_eval
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -15,7 +19,7 @@ from pyvis.network import Network
 st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣")
 
 with st.sidebar:
-    openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+    #openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
     "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
     # "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]()"
@@ -81,13 +85,19 @@ def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_colum
     return pd.DataFrame(results)
 
 
-def calculate_embeddings(data_in, model_sbert_name, sentences_in):
+def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
     with st.spinner(f"calculate embeddings for column {st.session_state.selected_item_column}"):
-        model_in = SentenceTransformer(model_sbert_name)
-        output = model_in.encode(sentences=sentences_in,
-                                 show_progress_bar=True,
-                                 normalize_embeddings=True)
-        data_in["embedding"] = list(output)
+        if model_selected == "SBERT":
+
+            model_in = SentenceTransformer(model_name)
+            output = model_in.encode(sentences=sentences_in.tolist(),
+                                     show_progress_bar=True,
+                                     normalize_embeddings=True)
+            data_in["embedding"] = list(output)
+
+        if model_selected == "ADA":
+            #df['code_embedding'] = sentences_in.apply(lambda x: get_embedding(x, model=model_name))
+            data_in["embedding"] = sentences_in.apply(lambda x: get_embedding(x, model_name))
         return data_in
 
 
@@ -98,7 +108,7 @@ def calculate_similarity(data_in, selected_column):
             return cos_sim_1
 
 
-def get_embedding(text, model_in="text-embedding-ada-002"):
+def get_embedding(text, model_in):
     text = text.replace("\n", " ")
     return client.embeddings.create(input=[text], model=model_in).data[0].embedding
 
@@ -147,35 +157,35 @@ def calculate_edge_width(weight, max_width=20, min_width=1):
     return max_width if weight == 1 else max(min_width, weight * max_width)
 
 
-def get_graph(df_in, treshold):
-  got_net = Network(height="600px", width="100%", font_color="black")
-  got_net.toggle_physics(False)
+def get_graph(df_in, treshold_in):
+    got_net = Network(height="600px", width="100%", font_color="black")
+    got_net.toggle_physics(False)
 
-# set the physics layout of the network
-  got_net.barnes_hut()
-  got_data = df_in
+    # set the physics layout of the network
+    got_net.barnes_hut()
+    got_data = df_in
 
-  sources = got_data['Item 1']
-  s_label = got_data["Questionnaire 1"]
-  targets = got_data['Item 2']
-  t_label = got_data["Questionnaire 2"]
-  weights = got_data['Similarity score']
+    sources = got_data['Item 1']
+    s_label = got_data["Questionnaire 1"]
+    targets = got_data['Item 2']
+    t_label = got_data["Questionnaire 2"]
+    weights = got_data['Similarity score']
 
-  edge_data = zip(sources, s_label, targets, t_label, weights)
+    edge_data = zip(sources, s_label, targets, t_label, weights)
 
-  for e in edge_data:
-      src = e[0]
-      dst = e[2]
-      w = e[4]
-      width = calculate_edge_width(w)
-      if w > treshold:
-          got_net.add_node(src, src, title=e[1])
-          got_net.add_node(dst, dst, title=e[3])
-          got_net.add_edge(src, dst, value=w, width=width)
+    for e in edge_data:
+        src = e[0]
+        dst = e[2]
+        w = e[4]
+        width = calculate_edge_width(w)
+        if w > treshold_in:
+            got_net.add_node(src, src, title=e[1])
+            got_net.add_node(dst, dst, title=e[3])
+            got_net.add_edge(src, dst, value=w, width=width)
 
-  neighbor_map = got_net.get_adj_list()
+    neighbor_map = got_net.get_adj_list()
 
-  got_net.set_options('''
+    got_net.set_options('''
   {
     "nodes": {
       "borderWidth": 2,
@@ -187,12 +197,12 @@ def get_graph(df_in, treshold):
   }
   ''')
 
-  # add neighbor data to node hover data
-  for node in got_net.nodes:
-    #node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
-    node["value"] = len(neighbor_map[node["id"]])
+    # add neighbor data to node hover data
+    for node in got_net.nodes:
+        # node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+        node["value"] = len(neighbor_map[node["id"]])
 
-  got_net.show("graph.html", notebook=False)
+    got_net.show("graph.html", notebook=False)
 
 
 ####################################
@@ -242,12 +252,9 @@ else:
     sim_status = sim_status_container.success('Step 3 done! Similarity scores build between '
                                               + str(len(st.session_state.similarity)) + ' pairs')
 
-
-
-
-
 load_tab, embedding_tab, pair_tab, similarity_tab = st.tabs(
-    ['Step 1: Load Sentence Data', 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs', "Step 4: Select and Explore Pairs"])
+    ['Step 1: Load Sentence Data', 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs',
+     "Step 4: Select and Explore Pairs"])
 
 with load_tab:
     loaded_file = get_data()
@@ -280,14 +287,36 @@ with embedding_tab:
         )
         if model_options == "ADA":
             # Get data uploaded by the user
+            model = embedding_container.selectbox("Select a model to process", ["text-embedding-ada-002","text-embedding-3-small"])
+            openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+
             if not openai_api_key:
-                embedding_container.info("Please add your OpenAI API key in the sidebar to continue.")
+                embedding_container.info("Please add your OpenAI API key to continue.")
 
             if openai_api_key:
-                os.environ["OPENAI_API_KEY"] = OpenAI.API
+                client = OpenAI(api_key=openai_api_key)
                 df = st.session_state.data
-                df['embedding'] = df[selected_item_column].combined.apply(
-                    lambda x: get_embedding(x, model_in='text-embedding-ada-002'))
+                sentences = df[st.session_state.selected_item_column].tolist()
+
+                if embedding_container.button(f"Calculate {model_options} embeddings", type='primary', key=f"{model_options}_button"):
+                    start_time_em = time.time()
+                    df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
+
+                    if df_embedding is not None:
+                        st.write(df_embedding[[selected_item_column, "embedding"]])
+                        # if embedding_container.button("Save", type='primary',key='save_emb'):
+                        st.session_state.embedding = df_embedding
+                        # embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
+                        end_time_em = time.time()
+                        duration_em = end_time_em - start_time_em
+                        duration_minutes_em = duration_em / 60
+
+                        emb_status.empty()
+                        emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
+                                                                  + str(len(st.session_state.embedding)) +
+                                                                  " rows with a vector size of " +
+                                                                  str(len(df_embedding.embedding[0]))
+                                                                  + f' in {duration_minutes_em:.2f} minutes')
 
         if model_options == "SBERT":
             model = embedding_container.selectbox("Select a model to process",
@@ -298,19 +327,26 @@ with embedding_tab:
             df = st.session_state.data
             sentences = df[selected_item_column].tolist()
 
-            if embedding_container.button(f"Calculate {model_options} embeddings", type='primary'):
-                df_embedding = calculate_embeddings(df, model, sentences)
+            if embedding_container.button(f"Calculate {model_options} embeddings", type='primary',key=f"{model_options}_button"):
+                start_time_em = time.time()
+                df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
 
                 if df_embedding is not None:
                     st.write(df_embedding[[selected_item_column, "embedding"]])
                     # if embedding_container.button("Save", type='primary',key='save_emb'):
                     st.session_state.embedding = df_embedding
                     # embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
+                    end_time_em = time.time()
+                    duration_em = end_time_em - start_time_em
+                    duration_minutes_em = duration_em / 60
+
                     emb_status.empty()
                     emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
                                                               + str(len(st.session_state.embedding)) +
                                                               " rows with a vector size of " +
-                                                              str(len(df_embedding.embedding[0])))
+                                                              str(len(df_embedding.embedding[0]))
+                                                              + f' in {duration_minutes_em:.2f} minutes')
+
 with pair_tab:
     if st.session_state.data is None and st.session_state.embedding is None:
         st.info('You have to select data and build embeddings in order to view similarity')
@@ -322,21 +358,25 @@ with pair_tab:
 
         if st.button(f'Calculate Similarity for all pairs of column {selected_item_column}', type='primary',
                      key="calc_similarity"):
+            start_time_sim = time.time()
             cosine_similarity = calculate_similarity(data, selected_item_column)
             df_sim = get_similarity_dataframe(data, cosine_similarity, selected_item_column,
                                               selected_questionaire_column)
             st.session_state.similarity = df_sim
+            end_time_sim = time.time()
+            duration_sim = end_time_sim - start_time_sim
+            duration_minutes = duration_sim / 60
 
             sim_status.empty()
             sim_status = sim_status_container.success('Step 3 done! Similarity scores build between '
-                                                      + str(len(st.session_state.similarity)) + ' pairs')
+                                                      + str(len(st.session_state.similarity))
+                                                      + f' pairs in {duration_minutes:.2f} minutes')
 with similarity_tab:
     if st.session_state.similarity is None:
         st.info('You have to select data and build embeddings for viewing similarity')
     else:
         sim_container = st.container()
         df_sim = st.session_state.similarity
-
 
         with sim_container.expander("Filtering"):
             st.subheader('Initial DataFrame')
@@ -346,8 +386,18 @@ with similarity_tab:
             st.session_state.df_filtered = dataframe_explorer(df_sim, case=False)
             st.dataframe(st.session_state.df_filtered, use_container_width=True)
 
+            filter_excel = convert_df_to_excel(st.session_state.df_filtered)
+            if filter_excel is not None:
+                st.download_button(
+                    label=f"Download whole filtered table with "
+                          f"{len(st.session_state.df_filtered)} elements as Excel file",
+                    data=filter_excel,
+                    file_name='ssh_download_filtered_selection_table.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+
             st.subheader('Filtered DataFrame')
-            #df_filtered = df_sim.query(query_string)
+            # df_filtered = df_sim.query(query_string)
             size = len(st.session_state.df_filtered)
             st.info(f"Filtered {size} elements")
 
@@ -377,8 +427,9 @@ with similarity_tab:
                     file_name='final_selection.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
+
         with sim_container.expander("Analyse"):
-            physics = st.selectbox('Choose a Graph', ["Filter","All"])
+            physics = st.selectbox('Choose a Graph', ["Filter", "All"])
             treshold = st.slider("value", 0.5, 1.0, 0.1)
 
             if st.button(f'View Graph', type='primary',
@@ -392,4 +443,4 @@ with similarity_tab:
 
                     HtmlFile = open("graph.html", 'r', encoding='utf-8')
                     source_code = HtmlFile.read()
-                    components.html(source_code,  height=600)
+                    components.html(source_code, height=600)
