@@ -18,12 +18,16 @@ def set_credentials():
     st.session_state['password'] = st.sidebar.text_input("Password", type="password")
 
 
-def load_questionnaires(url):
+def load_questionnaires(url, flag):
     # Check if username and password are entered
     if st.session_state['username'] and st.session_state['password']:
-        response = requests.get(url, auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
+        if flag:
+            response = requests.get(url, params={"_count" : "10000"}, auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
+        if not flag:
+            response = requests.get(url,
+                                    auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
         if response.status_code == 200:
-            return response.json()  # Assuming the response contains JSON data
+            return response.json()
         else:
             st.error("Error loading questionnaires.")
             return None
@@ -60,20 +64,81 @@ def extract_data(title, copyright, json_data):
     # Create a DataFrame from the list of rows
     return pd.DataFrame(rows)
 
+def extract_quest(json_data):
+    results = {}
+    for item in json_data:  # Direkter Zugriff auf das 'entry'-Feld angenommen
+        resource = item.get('resource', {})
+        titel = resource.get('title')
+        id = resource.get('id')
+
+        if titel and id:
+            results[titel] = id
+    return results
+
+def fetch_all_resources(url):
+    resources = {}
+    load_count = 0  # Zählvariable für die Anzahl der Ladungen
+
+    while url and load_count<1:  # Bedingung umfasst nun auch die Anzahl der Ladungen
+        print("url", url)
+        bundle = load_questionnaires(url, True)
+        # Extrahiere Ressourcen aus dem aktuellen Bundle und füge sie der Liste hinzu
+        if 'entry' in bundle:
+            for entry in bundle['entry']:
+                result = extract_quest(bundle['entry'])
+                resources.update(result)  # Verwende `extend` statt `append`, um Listen korrekt zu verknüpfen
+
+        # Suche nach dem 'next' Link im Bundle, um die nächste Seite abzurufen
+        url = None  # Zurücksetzen der URL für den Fall, dass kein 'next' Link gefunden wird
+        for link in bundle.get('link', []):
+            if link['relation'] == 'next':
+                url = link['url']
+                break
+
+        load_count += 1
+
+    return resources
 
 set_credentials()
+
+
+# Basis-URL des FHIR-Servers und der Ressourcentyp, den du abrufen möchtest
+base_url = "https://fhir.loinc.org/"
+resource_type = "Questionnaire"
+initial_url = f"{base_url}/{resource_type}"
+
+slider = st.select_slider("Displayed values:", ["All LOINC-Codes", "Pre-selection LOINC-Codes"])
 
 codes = {
     "Patient health questionnaire 4 item": "69724-3",
     "Kansas City cardiomyopathy questionnaire": "71941-9",
-    "Generalized anxiety disorder 7 item": "69737-5"
-}
+    "Generalized anxiety disorder 7 item": "69737-5",
+    "":"69723-5"}
+
+if slider == "All LOINC-Codes":
+
+    all_resources = fetch_all_resources(initial_url)
+    st.write(f"Total resources fetched: {len(all_resources)}")
+    selected_names = st.multiselect("LOINC Codes", all_resources)
+    ids = [all_resources[a] for a in selected_names]
+    print(all_resources)
+
+if slider == "Pre-selection LOINC-Codes":
+    selected_names = st.multiselect("LOINC Codes", codes.keys())
+    ids = [codes[a] for a in selected_names]
+
+
+
+
 
 # MultiSelect box to select multiple questionnaires
-selected_names = st.multiselect("LOINC Codes", list(codes.keys()))
+#
+#selected_names = st.multiselect("LOINC Codes", list(codes.keys()))
 
 # Generate URLs based on selected codes
-urls = [f"https://fhir.loinc.org/Questionnaire/{codes[name]}" for name in selected_names]
+urls = [f"https://fhir.loinc.org/Questionnaire/{id}" for id in ids]
+
+print(urls)
 
 # Initialize an empty list for the dataframes
 dfs = []
@@ -82,7 +147,7 @@ dfs = []
 if st.button("Load questionnaires"):
     for url in urls:
         # Load questionnaire data for each selected URL
-        data = load_questionnaires(url)
+        data = load_questionnaires(url,False)
         # Extract data and add the DataFrame to the list
         df = extract_data(data["title"], data["copyright"], data["item"])
 
