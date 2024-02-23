@@ -10,6 +10,8 @@ if 'username' not in st.session_state:
     st.session_state['username'] = ''
 if 'password' not in st.session_state:
     st.session_state['password'] = ''
+if 'loincdf' not in st.session_state:
+    st.session_state["loincdf"] = pd.DataFrame()
 
 
 # Function to set credentials
@@ -83,17 +85,18 @@ def fetch_all_resources(url):
         print("url", url)
         bundle = load_questionnaires(url, True)
         # Extrahiere Ressourcen aus dem aktuellen Bundle und füge sie der Liste hinzu
-        if 'entry' in bundle:
+        if bundle is not None and 'entry' in bundle:
             for entry in bundle['entry']:
                 result = extract_quest(bundle['entry'])
                 resources.update(result)  # Verwende `extend` statt `append`, um Listen korrekt zu verknüpfen
 
         # Suche nach dem 'next' Link im Bundle, um die nächste Seite abzurufen
         url = None  # Zurücksetzen der URL für den Fall, dass kein 'next' Link gefunden wird
-        for link in bundle.get('link', []):
-            if link['relation'] == 'next':
-                url = link['url']
-                break
+        if bundle is not None:
+            for link in bundle.get('link', []):
+                if link['relation'] == 'next':
+                    url = link['url']
+                    break
 
         load_count += 1
 
@@ -107,7 +110,7 @@ base_url = "https://fhir.loinc.org/"
 resource_type = "Questionnaire"
 initial_url = f"{base_url}/{resource_type}"
 
-slider = st.select_slider("Displayed values:", ["All LOINC-Codes", "Pre-selection LOINC-Codes"])
+slider = st.radio("Displayed values:", ["All LOINC-Codes", "Pre-selection LOINC-Codes"])
 
 codes = {
     "Patient health questionnaire 4 item": "69724-3",
@@ -116,7 +119,6 @@ codes = {
     "":"69723-5"}
 
 if slider == "All LOINC-Codes":
-
     all_resources = fetch_all_resources(initial_url)
     st.write(f"Total resources fetched: {len(all_resources)}")
     selected_names = st.multiselect("LOINC Codes", all_resources)
@@ -163,5 +165,14 @@ if st.button("Load questionnaires"):
         st.write("Combined table of all selected questionnaires:")
         combined_df = pd.concat(dfs, ignore_index=True)
         st.write(combined_df)
-    else:
-        st.error("No data loaded. Please select at least one questionnaire.")
+        st.session_state.loincdf = combined_df
+
+            # No need to rewrite combined_df here as it will be redrawn after the button press.
+
+    # Check if combined_df has been saved in the session_state and display it.
+if "loincdf" in st.session_state:
+    st.write("Saved LOINC Selection for Semantic Search:")
+    st.dataframe(st.session_state["loincdf"])
+else:
+    st.error("No data loaded. Please select at least one questionnaire.")
+

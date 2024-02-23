@@ -1,14 +1,10 @@
 import io
 import time
-
+import colorsys
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from openai import OpenAI
-
-from sklearn.manifold import TSNE
-import numpy as np
-from ast import literal_eval
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,10 +15,9 @@ from pyvis.network import Network
 st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣")
 
 with st.sidebar:
-    #openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
     "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
-    # "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]()"
 
 
 def get_data():
@@ -57,19 +52,21 @@ def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_colum
     results = []
     with st.spinner("Building pairs"):
         for i, row_i in enumerate(df_in.itertuples()):
-            questionaire_value_i = getattr(row_i, questionnaire_column)
+            questionnaire_value_i = getattr(row_i, questionnaire_column)
+            item1 = df_in[item_column].iloc[i]
             for j, row_j in enumerate(df_in.itertuples()):
-                questionaire_value_j = getattr(row_j, questionnaire_column)
-                if j <= i or questionaire_value_i == questionaire_value_j:
+                questionnaire_value_j = getattr(row_j, questionnaire_column)
+                item2 = df_in[item_column].iloc[j]
+                if j <= i or questionnaire_value_i == questionnaire_value_j:
                     continue
 
                 similarity_score = cosine_sim[i][j]
                 # if similarity_score >= threshold:
                 results.append({
-                    'Questionnaire 1': questionaire_value_i,
-                    'Item 1': getattr(row_i, item_column),
-                    'Questionnaire 2': questionaire_value_j,
-                    'Item 2': getattr(row_j, item_column),
+                    'Questionnaire 1': questionnaire_value_i,
+                    'Item 1': item1,
+                    'Questionnaire 2': questionnaire_value_j,
+                    'Item 2': item2,
                     'Similarity score': similarity_score
                 })
 
@@ -78,8 +75,8 @@ def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_colum
                 print(f"{len(results)} pairs build!")
 
                 print(
-                    f"Questionnaire '{questionaire_value_i}', Item '{getattr(row_i, item_column)}' "
-                    f"and Questionnaire '{questionaire_value_j}', Item '{getattr(row_i, item_column)}' "
+                    f"Questionnaire '{questionnaire_value_i}', Item '{item1}' "
+                    f"and Questionnaire '{questionnaire_value_j}', Item '{item2}' "
                     f"have similarity score: {similarity_score}\n")
         results.sort(key=lambda x: x['Similarity score'], reverse=True)
     return pd.DataFrame(results)
@@ -96,7 +93,6 @@ def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
             data_in["embedding"] = list(output)
 
         if model_selected == "ADA":
-            #df['code_embedding'] = sentences_in.apply(lambda x: get_embedding(x, model=model_name))
             data_in["embedding"] = sentences_in.apply(lambda x: get_embedding(x, model_name))
         return data_in
 
@@ -152,7 +148,7 @@ def convert_df(df_in):
     return df_in.to_csv(index=False).encode('utf-8')
 
 
-# Funktion zum Berechnen der Kantenbreite basierend auf dem Gewicht
+# Function zum Berechnen der Kantenbreite basierend auf dem Gewicht
 def calculate_edge_width(weight, max_width=20, min_width=1):
     return max_width if weight == 1 else max(min_width, weight * max_width)
 
@@ -161,47 +157,48 @@ def get_graph(df_in, treshold_in):
     got_net = Network(height="600px", width="100%", font_color="black")
     got_net.toggle_physics(False)
 
-    # set the physics layout of the network
+    # Set the physics layout of the network
     got_net.barnes_hut()
-    got_data = df_in
+    print(treshold_in)
 
-    sources = got_data['Item 1']
-    s_label = got_data["Questionnaire 1"]
-    targets = got_data['Item 2']
-    t_label = got_data["Questionnaire 2"]
-    weights = got_data['Similarity score']
+    for index, row in df_in.iterrows():
+        src = row['Item 1']
+        s_q_label = row["Questionnaire 1"]
+        dst = row['Item 2']
+        t_q_label = row["Questionnaire 2"]
+        w = row['Similarity score']
 
-    edge_data = zip(sources, s_label, targets, t_label, weights)
+        # Calculate the width of the edge based on the similarity score
+        width = calculate_edge_width(round(w,2))
 
-    for e in edge_data:
-        src = e[0]
-        dst = e[2]
-        w = e[4]
-        width = calculate_edge_width(w)
-        if w > treshold_in:
-            got_net.add_node(src, src, title=e[1])
-            got_net.add_node(dst, dst, title=e[3])
-            got_net.add_edge(src, dst, value=w, width=width)
-
+        # Add an edge only if the similarity score is above the threshold
+        # and the source and target questions are from different questionnaires
+        if round(w,2) >= treshold_in:
+            got_net.add_node(f"{src} ({s_q_label})", f"{src} ({s_q_label})", title=s_q_label)
+            got_net.add_node(f"{dst} ({t_q_label})",f"{dst} ({t_q_label})", title=t_q_label)
+            got_net.add_edge(f"{src} ({s_q_label})", f"{dst} ({t_q_label})", value=round(w,2), width=width)
+            print(src, " ", dst ," ",index, " ", w)
+    # Generate neighbor map for hover data
     neighbor_map = got_net.get_adj_list()
 
+    # Set options for nodes and interactions
     got_net.set_options('''
-  {
-    "nodes": {
-      "borderWidth": 2,
-      "borderWidthSelected": 4
-    },
-    "interaction": {
-      "dragNodes": true
+    {
+        "nodes": {
+            "borderWidth": 2,
+            "borderWidthSelected": 4
+        },
+        "interaction": {
+            "dragNodes": true
+        }
     }
-  }
-  ''')
+    ''')
 
-    # add neighbor data to node hover data
+    # Add neighbor data to node hover data
     for node in got_net.nodes:
-        # node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
         node["value"] = len(neighbor_map[node["id"]])
 
+    # Show the network
     got_net.show("graph.html", notebook=False)
 
 
@@ -217,8 +214,8 @@ if 'similarity' not in st.session_state:
 if 'selected_item_column' not in st.session_state:
     st.session_state.selected_item_column = None
 
-if 'selected_questionaire_column' not in st.session_state:
-    st.session_state.selected_questionaire_column = None
+if 'selected_questionnaire_column' not in st.session_state:
+    st.session_state.selected_questionnaire_column = None
 
 if 'selected_data' not in st.session_state:
     st.session_state.selected_data = pd.DataFrame()
@@ -230,6 +227,7 @@ if "df_filtered" not in st.session_state:
 
 st.title("📒 Semantic Search Helper")
 # select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
+
 
 status_container = st.container()
 if st.session_state.data is None:
@@ -257,13 +255,20 @@ load_tab, embedding_tab, pair_tab, similarity_tab = st.tabs(
      "Step 4: Select and Explore Pairs"])
 
 with load_tab:
-    loaded_file = get_data()
+    input_in = st.radio("Use:", ["LOINC-Selection", "New Upload"])
+
+    if input_in == "LOINC-Selection" and st.session_state["loincdf"] is not None:
+        loaded_file = st.session_state["loincdf"]
+
+    if input_in == "New Upload" or st.session_state["loincdf"] is None:
+        loaded_file = get_data()
+
     if loaded_file is not None:
         with st.expander("Show your uploaded data"):
             st.write(loaded_file)
         selected_item_column = st.selectbox("Select the columns with your sentences.", loaded_file.columns)
-        selected_questionaire_column = st.selectbox("Select the columns with your questionnaire names.",
-                                                    loaded_file.columns)
+        selected_questionnaire_column = st.selectbox("Select the columns with your questionnaire names.",
+                                                     loaded_file.columns)
 
         with st.expander("Show column data"):
             st.write(loaded_file[selected_item_column].tolist())
@@ -273,7 +278,7 @@ with load_tab:
         if st.button('use data', type='primary', key="save_data"):
             st.session_state.data = loaded_file
             st.session_state.selected_item_column = selected_item_column
-            st.session_state.selected_questionaire_column = selected_questionaire_column
+            st.session_state.selected_questionnaire_column = selected_questionnaire_column
             meta_status.empty()
             meta_status = status_container.success('Step 1 done! Data selected containing '
                                                    + str(len(st.session_state.data)) + ' rows')
@@ -287,7 +292,8 @@ with embedding_tab:
         )
         if model_options == "ADA":
             # Get data uploaded by the user
-            model = embedding_container.selectbox("Select a model to process", ["text-embedding-ada-002","text-embedding-3-small"])
+            model = embedding_container.selectbox("Select a model to process",
+                                                  ["text-embedding-ada-002", "text-embedding-3-small"])
             openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 
             if not openai_api_key:
@@ -298,7 +304,8 @@ with embedding_tab:
                 df = st.session_state.data
                 sentences = df[st.session_state.selected_item_column].tolist()
 
-                if embedding_container.button(f"Calculate {model_options} embeddings", type='primary', key=f"{model_options}_button"):
+                if embedding_container.button(f"Calculate {model_options} embeddings",
+                                              type='primary', key=f"{model_options}_button"):
                     start_time_em = time.time()
                     df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
 
@@ -327,7 +334,8 @@ with embedding_tab:
             df = st.session_state.data
             sentences = df[selected_item_column].tolist()
 
-            if embedding_container.button(f"Calculate {model_options} embeddings", type='primary',key=f"{model_options}_button"):
+            if embedding_container.button(f"Calculate {model_options} embeddings",
+                                          type='primary', key=f"{model_options}_button"):
                 start_time_em = time.time()
                 df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
 
@@ -354,14 +362,14 @@ with pair_tab:
         pair_container = st.container()
         data = st.session_state.embedding
         selected_item_column = st.session_state.selected_item_column
-        selected_questionaire_column = st.session_state.selected_questionaire_column
+        selected_questionnaire_column = st.session_state.selected_questionnaire_column
 
         if st.button(f'Calculate Similarity for all pairs of column {selected_item_column}', type='primary',
                      key="calc_similarity"):
             start_time_sim = time.time()
             cosine_similarity = calculate_similarity(data, selected_item_column)
             df_sim = get_similarity_dataframe(data, cosine_similarity, selected_item_column,
-                                              selected_questionaire_column)
+                                              selected_questionnaire_column)
             st.session_state.similarity = df_sim
             end_time_sim = time.time()
             duration_sim = end_time_sim - start_time_sim
