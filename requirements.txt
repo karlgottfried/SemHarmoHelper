@@ -136,6 +136,6 @@ wordcloud==1.9.3
 XlsxWriter==3.1.9
 ydata-profiling==4.6.4
 zipp==3.16.2
-
 sklearn~=0.0.post7
 pyvis~=0.3.2
+mitosheet~=0.1.557

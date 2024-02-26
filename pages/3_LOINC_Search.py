@@ -2,6 +2,11 @@ import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
 import pandas as pd
+from st_aggrid import AgGrid
+#from mitosheet.streamlit.v1 import spreadsheet
+#import streamlit_option_menu
+#from streamlit_option_menu import option_menu
+
 
 st.title('LOINC FHIR Questionnaires')
 
@@ -24,7 +29,7 @@ def load_questionnaires(url, flag):
     # Check if username and password are entered
     if st.session_state['username'] and st.session_state['password']:
         if flag:
-            response = requests.get(url, params={"_count" : "10000"}, auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
+            response = requests.get(url, params={"_count": "10000"}, auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
         if not flag:
             response = requests.get(url,
                                     auth=HTTPBasicAuth(st.session_state['username'], st.session_state['password']))
@@ -39,9 +44,9 @@ def load_questionnaires(url, flag):
 
 
 # Function to display questionnaires
-def display_questionnaires(data):
-    if data:
-        st.write(data["item"])
+def display_questionnaires(data_in):
+    if data_in:
+        st.write(data_in["item"])
     else:
         st.write("No data found.")
 
@@ -117,30 +122,18 @@ codes = {
     "Kansas City cardiomyopathy questionnaire": "71941-9",
     "Generalized anxiety disorder 7 item": "69737-5",
     "":"69723-5"}
-
+ids=[]
 if slider == "All LOINC-Codes":
     all_resources = fetch_all_resources(initial_url)
     st.write(f"Total resources fetched: {len(all_resources)}")
     selected_names = st.multiselect("LOINC Codes", all_resources)
     ids = [all_resources[a] for a in selected_names]
-    print(all_resources)
 
 if slider == "Pre-selection LOINC-Codes":
     selected_names = st.multiselect("LOINC Codes", codes.keys())
     ids = [codes[a] for a in selected_names]
 
-
-
-
-
-# MultiSelect box to select multiple questionnaires
-#
-#selected_names = st.multiselect("LOINC Codes", list(codes.keys()))
-
-# Generate URLs based on selected codes
 urls = [f"https://fhir.loinc.org/Questionnaire/{id}" for id in ids]
-
-print(urls)
 
 # Initialize an empty list for the dataframes
 dfs = []
@@ -162,17 +155,23 @@ if st.button("Load questionnaires"):
 
     # Combine all DataFrames in the list into a single DataFrame
     if dfs:
-        st.write("Combined table of all selected questionnaires:")
         combined_df = pd.concat(dfs, ignore_index=True)
-        st.write(combined_df)
+        #st.write(combined_df)
         st.session_state.loincdf = combined_df
+        if len(combined_df)>0:
+            st.info(
+                f"Saved LOINC Selection for Semantic Search: "
+                f"{len(ids)} Instruments with {len(st.session_state.loincdf)} questions included")
 
-            # No need to rewrite combined_df here as it will be redrawn after the button press.
+        # No need to rewrite combined_df here as it will be redrawn after the button press.
 
     # Check if combined_df has been saved in the session_state and display it.
+#if st.toggle("Show incomplete thoughts", key=f"incomplete-toggle"):
+
 if "loincdf" in st.session_state:
-    st.write("Saved LOINC Selection for Semantic Search:")
-    st.dataframe(st.session_state["loincdf"])
+    #st.dataframe(st.session_state["loincdf"])
+    AgGrid(st.session_state["loincdf"], height=500)
+    #spreadsheet(st.session_state["loincdf"])
 else:
     st.error("No data loaded. Please select at least one questionnaire.")
 
