@@ -2,7 +2,7 @@ import io
 import time
 import streamlit.components.v1 as components
 from openai import OpenAI
-
+# import bertopic
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from streamlit_extras.dataframe_explorer import dataframe_explorer
@@ -10,15 +10,54 @@ import streamlit_highcharts as hg
 
 import requests
 from requests.auth import HTTPBasicAuth
-import pandas as pd
-from st_aggrid import AgGrid, ColumnsAutoSizeMode
-from streamlit_echarts import st_echarts
+# from st_aggrid import AgGrid, ColumnsAutoSizeMode
+# from streamlit_echarts import st_echarts
 import streamlit as st
 
 from pyvis.network import Network
-#import networkx as nx
+import plotly.express as px
 
-st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣")
+import altair as alt
+from umap.umap_ import UMAP
+from sklearn.decomposition import PCA
+import pandas as pd
+
+import plotly.graph_objs as go
+
+# import networkx as nx
+# import hdbscan
+
+COPYRIGHT_LOINC = "Copyright"
+RESPONSE_DISPLAY_LOINC = "Response (Display)"
+QUESTION_DISPLAY_LOINC = "Question (Display)"
+CODE_LOINC = "Code"
+QUESTIONNAIRE_LOINC = "Questionnaire"
+
+PERCENT_MATCHES = 'Percent Matches (%)'
+MATCHES = 'Number Of Matches'
+NUMBER_OF_QUESTIONS = 'Number Of Questions'
+QUESTIONNAIRE_ID = 'Questionnaire ID'
+
+LOINCDF = 'loincdf'
+DF_FILTERED = "df_filtered"
+SELECTED_DATA = 'selected_data'
+QUESTIONNAIRE_COLUMN = 'selected_questionnaire_column'
+SELECTED_ITEM_COLUMN = 'selected_item_column'
+SIMILARITY = 'similarity'
+METADATA = 'metadata'
+
+SELECT = "Select"
+EMBEDDING = "Embedding"
+ITEM_1 = 'Item 1'
+ITEM_2 = 'Item 2'
+QUESTIONNAIRE_1 = "Questionnaire 1"
+QUESTIONNAIRE_2 = 'Questionnaire 2'
+MODEL_ADA = "ADA"
+MODEL_SBERT = "SBERT"
+SIMILARITY_SCORE = 'Similarity score'
+
+st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣", layout="wide",
+                   initial_sidebar_state="expanded")
 
 
 def get_data():
@@ -49,26 +88,26 @@ def get_data():
         return None
 
 
-def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_column):
+def get_similarity_dataframe(df_in, cosine_sim, item_column_in, questionnaire_column_in):
     results = []
     with st.spinner("Building pairs"):
         for i, row_i in enumerate(df_in.itertuples()):
-            questionnaire_value_i = getattr(row_i, questionnaire_column)
-            item1 = df_in[item_column].iloc[i]
+            questionnaire_value_i = getattr(row_i, questionnaire_column_in)
+            item1 = df_in[item_column_in].iloc[i]
             for j, row_j in enumerate(df_in.itertuples()):
-                questionnaire_value_j = getattr(row_j, questionnaire_column)
-                item2 = df_in[item_column].iloc[j]
+                questionnaire_value_j = getattr(row_j, questionnaire_column_in)
+                item2 = df_in[item_column_in].iloc[j]
                 if j <= i or questionnaire_value_i == questionnaire_value_j:
                     continue
 
                 similarity_score = cosine_sim[i][j]
                 # if similarity_score >= threshold:
                 results.append({
-                    'Questionnaire 1': questionnaire_value_i,
-                    'Item 1': item1,
-                    'Questionnaire 2': questionnaire_value_j,
-                    'Item 2': item2,
-                    'Similarity score': similarity_score
+                    QUESTIONNAIRE_1: questionnaire_value_i,
+                    ITEM_1: item1,
+                    QUESTIONNAIRE_2: questionnaire_value_j,
+                    ITEM_2: item2,
+                    SIMILARITY_SCORE: similarity_score
                 })
 
                 # parent_obj.info(f"Questionnaire '{row_i.questionnaire}', Item '{row_i.item_text}' and Questionnaire
@@ -76,56 +115,55 @@ def get_similarity_dataframe(df_in, cosine_sim, item_column, questionnaire_colum
                 print(f"{len(results)} pairs build!")
 
                 print(
-                    f"Questionnaire '{questionnaire_value_i}', Item '{item1}' "
-                    f"and Questionnaire '{questionnaire_value_j}', Item '{item2}' "
-                    f"have similarity score: {similarity_score}\n")
-        results.sort(key=lambda x: x['Similarity score'], reverse=True)
+                    f"{QUESTIONNAIRE_1} '{questionnaire_value_i}', Item '{item1}' "
+                    f"and {QUESTIONNAIRE_2}'{questionnaire_value_j}', Item '{item2}' "
+                    f"have {SIMILARITY_SCORE}: {similarity_score}\n")
+        results.sort(key=lambda x: x[SIMILARITY_SCORE], reverse=True)
     return pd.DataFrame(results)
 
 
 def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
     with st.spinner(f"calculate embeddings for column {st.session_state.selected_item_column}"):
-        if model_selected == "SBERT":
-
+        if model_selected == MODEL_SBERT:
             model_in = SentenceTransformer(model_name)
             output = model_in.encode(sentences=sentences_in.tolist(),
                                      show_progress_bar=True,
                                      normalize_embeddings=True)
-            data_in["embedding"] = list(output)
+            data_in[EMBEDDING] = list(output)
 
-        if model_selected == "ADA":
-            data_in["embedding"] = sentences_in.apply(lambda x: get_embedding(x, model_name))
+        if model_selected == MODEL_ADA:
+            data_in[EMBEDDING] = sentences_in.apply(lambda x: get_embedding(x, model_name))
         return data_in
 
 
 def calculate_similarity(data_in, selected_column):
     with st.spinner(f"calculate {selected_column}"):
-        if len(data_in["embedding"]) > 0:
-            cos_sim_1 = cosine_similarity(data_in["embedding"].tolist())
+        if len(data_in[EMBEDDING]) > 0:
+            cos_sim_1 = cosine_similarity(data_in[EMBEDDING].tolist())
             return cos_sim_1
 
 
-def get_embedding(text, model_in):
-    text = text.replace("\n", " ")
-    return client.embeddings.create(input=[text], model=model_in).data[0].embedding
+def get_embedding(text_in, model_in):
+    text_in = text_in.replace("\n", " ")
+    return client.embeddings.create(input=[text_in], model=model_in).data[0].embedding
 
 
 def dataframe_with_selections(df_in):
     df_with_selections = df_in.copy()
-    df_with_selections.insert(0, "Select", False)
+    df_with_selections.insert(0, SELECT, False)
 
     # Get dataframe row-selections from user with st.data_editor
     edited_df = st.data_editor(
         df_with_selections,
         use_container_width=True,
         hide_index=True,
-        column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+        column_config={SELECT: st.column_config.CheckboxColumn(required=True)},
         disabled=df_in.columns,
     )
 
     # Filter the dataframe using the temporary column, then drop the column
     selected_rows = edited_df[edited_df.Select]
-    return selected_rows.drop('Select', axis=1)
+    return selected_rows.drop(SELECT, axis=1)
 
 
 def add_to_selection(df_in):
@@ -181,11 +219,11 @@ def get_graph_html(df_in, threshold_in):
     got_net.barnes_hut()
 
     for index, row in df_in.iterrows():
-        src = row['Item 1']
-        s_q_label = row["Questionnaire 1"]
-        dst = row['Item 2']
-        t_q_label = row["Questionnaire 2"]
-        w = row['Similarity score']
+        src = row[ITEM_1]
+        s_q_label = row[QUESTIONNAIRE_1]
+        dst = row[ITEM_2]
+        t_q_label = row[QUESTIONNAIRE_2]
+        w = row[SIMILARITY_SCORE]
         width = calculate_edge_width(round(w, 2))
 
         if round(w, 2) >= threshold_in:
@@ -211,6 +249,7 @@ def get_graph_html(df_in, threshold_in):
 
     return html_string
 
+
 def render_dependencywheel_view(data_in):
     """
     Renders a dependency wheel view in Streamlit using Highcharts.
@@ -234,8 +273,8 @@ def render_dependencywheel_view(data_in):
     # Iterate over each row in the DataFrame
     for _, row in data_in.iterrows():
         # Select the specific columns for each row
-        source = row["Questionnaire 1"]
-        target = row["Questionnaire 2"]
+        source = row[QUESTIONNAIRE_1]
+        target = row[QUESTIONNAIRE_2]
 
         # If the connection (source, target pair) exists, increment its count
         if (source, target) in connections:
@@ -270,13 +309,12 @@ def render_dependencywheel_view(data_in):
             'type': 'dependencywheel'
         }],
         'title': {
-            'text': f'Overview for Similarity score between {round(data_in["Similarity score"].min(),2)} and {round(data_in["Similarity score"].max(),2)}'
+            'text': f'Overview for Similarity score between {round(data_in[SIMILARITY_SCORE].min(), 2)} and {round(data_in[SIMILARITY_SCORE].max(), 2)}'
         }
     }
 
     # Render the chart in Streamlit using Highcharts
     hg.streamlit_highcharts(chartDef, 700)
-
 
 
 def render_heatmap_view():
@@ -292,9 +330,9 @@ def render_heatmap_view():
     # Embed HTML content directly
     # Aggregate the data to count the number of questions with a score >= 0.56
     pivot_table = st.session_state.df_filtered.pivot_table(
-        index='Questionnaire 1',
-        columns='Questionnaire 2',
-        values='Similarity score',
+        index=QUESTIONNAIRE_1,
+        columns=QUESTIONNAIRE_2,
+        values=SIMILARITY_SCORE,
         aggfunc=lambda x: (x >= threshold).sum()
     ).fillna(0)
 
@@ -306,7 +344,7 @@ def render_heatmap_view():
         for j, comparison in enumerate(comparisons):
             scores.append([i, j, pivot_table.at[questionnaire, comparison]])
 
-    def create_heatmap(questionnaires, comparisons, scores):
+    def create_heatmap(questionnaires_in, comparisons_in, scores_in):
         """
         Creates heatmap chart options for ECharts.
 
@@ -329,21 +367,21 @@ def render_heatmap_view():
             },
             "xAxis": {
                 "type": "category",
-                "data": comparisons,
+                "data": comparisons_in,
                 "splitArea": {
                     "show": True
                 }
             },
             "yAxis": {
                 "type": "category",
-                "data": questionnaires,
+                "data": questionnaires_in,
                 "splitArea": {
                     "show": True
                 }
             },
             "visualMap": {
-                "min": 0,
-                "max": 5,  # This should be dynamic or adjusted based on the data
+                "min": "0",
+                "max": "5",  # This should be dynamic or adjusted based on the data
                 "calculable": True,
                 "orient": "horizontal",
                 "left": "center",
@@ -352,13 +390,13 @@ def render_heatmap_view():
             "series": [{
                 "name": 'Score',
                 "type": 'heatmap',
-                "data": scores,
+                "data": scores_in,
                 "label": {
                     "show": True
                 },
                 "emphasis": {
                     "itemStyle": {
-                        "shadowBlur": 10,
+                        "shadowBlur": "10",
                         "shadowColor": 'rgba(0, 0, 0, 0.5)'
                     }
                 }
@@ -368,7 +406,7 @@ def render_heatmap_view():
 
     # Create the chart with the data
     heatmap_options = create_heatmap(questionnaires, comparisons, scores)
-    st_echarts(options=heatmap_options, height="500px")
+    # st_echarts(options=heatmap_options, height="500px")
 
 
 def render_graph_view():
@@ -408,6 +446,7 @@ def render_graph_view():
             if get_graph_html:
                 components.html(graph_html, height=600)
 
+
 # Function to set credentials in the sidebar
 def set_credentials():
     st.session_state['username'] = st.sidebar.text_input("Username")
@@ -438,14 +477,6 @@ def load_questionnaires(url_in, flag):
         return None
 
 
-# Function to display questionnaire data
-def display_questionnaires(data_in):
-    if data_in:
-        st.write(data_in["item"])
-    else:
-        st.write("No data found.")
-
-
 # Function to extract data from questionnaire JSON
 def extract_data(title, copyright_in, json_data):
     rows = []
@@ -453,12 +484,12 @@ def extract_data(title, copyright_in, json_data):
         for code in item.get("code", []):  # Handle case where 'code' is not present
             answer_options = "\n".join([opt["valueCoding"]["display"] + " | " for opt in item.get("answerOption", [])])
             rows.append({
-                "ID": item["linkId"],
-                "Questionnaire": title,
-                "Code": code["code"],
-                "Question (Display)": code["display"],
-                "Response (Display)": answer_options,
-                "Copyright": copyright_in
+                QUESTIONNAIRE_ID: item["linkId"],
+                QUESTIONNAIRE_LOINC: title,
+                CODE_LOINC: code["code"],
+                QUESTION_DISPLAY_LOINC: code["display"],
+                RESPONSE_DISPLAY_LOINC: answer_options,
+                COPYRIGHT_LOINC: copyright_in
             })
     return pd.DataFrame(rows)
 
@@ -510,8 +541,9 @@ def render_loinc_search():
     resource_type = "Questionnaire"
     initial_url = f"{base_url}/{resource_type}"
     # Radio button for selecting displayed values
-    slider = st.radio("Displayed values:", ["All LOINC-Codes", "Pre-selection LOINC-Codes"])
+    slider = st.radio("Displayed values:", ["All LOINC-Codes", "Pre-selection LOINC-Codes"], horizontal=True)
     # Pre-defined LOINC codes
+
     codes = {
         "Patient health questionnaire 4 item": "69724-3",
         "Kansas City cardiomyopathy questionnaire": "71941-9",
@@ -525,6 +557,7 @@ def render_loinc_search():
         st.write(f"Total resources fetched: {len(all_resources)}")
         selected_names = st.multiselect("LOINC Codes", all_resources)
         ids = [all_resources[a] for a in selected_names]
+
     if slider == "Pre-selection LOINC-Codes":
         selected_names = st.multiselect("LOINC Codes", codes.keys())
         ids = [codes[a] for a in selected_names]
@@ -535,16 +568,16 @@ def render_loinc_search():
     if st.button("Load questionnaires"):
         for url in urls:
             # Load questionnaire data for each selected URL
-            data = load_questionnaires(url, False)
+            data_loc = load_questionnaires(url, False)
             # Extract data and add the DataFrame to the list
-            df = extract_data(data["title"], data["copyright"], data["item"])
+            df_loc = extract_data(data_loc["title"], data_loc["copyright"], data_loc["item"])
 
-            with st.expander(data["title"]):
+            with st.expander(data_loc["title"]):
                 # Expander for each questionnaire
-                st.write(df)  # Display the questionnaire table in the expander
-                st.info(data["copyright"])
+                st.write(df_loc)  # Display the questionnaire table in the expander
+                st.info(data_loc["copyright"])
 
-            dfs.append(df)
+            dfs.append(df_loc)
 
         # Combine all DataFrames in the list into a single DataFrame
         if dfs:
@@ -559,39 +592,100 @@ def render_loinc_search():
             # No need to rewrite combined_df here as it will be redrawn after the button press.
 
 
+def render_match_view():
+    df_frageboegen = st.session_state.metadata
+    df_aehnlichkeiten = st.session_state.df_filtered
+    # Ermitteln, welche Fragen in den Fragepaaren enthalten sind
+    ergebnisse = []
+    # Über jeden Fragebogen iterieren
+    for fragebogen_id in df_frageboegen[st.session_state.selected_questionnaire_column].unique():
+        # Fragen des aktuellen Fragebogens extrahieren
+        fragen_des_fragebogens = df_frageboegen[
+            df_frageboegen[st.session_state.selected_questionnaire_column] ==
+            fragebogen_id][st.session_state.selected_item_column]
 
+        # Anzahl der Fragen dieses Fragebogens, die in den Ähnlichkeitspaaren vorkommen, ermitteln
+        matches = df_aehnlichkeiten[
+            (df_aehnlichkeiten[QUESTIONNAIRE_1] == fragebogen_id) & df_aehnlichkeiten[ITEM_1].isin(
+                fragen_des_fragebogens) |
+            (df_aehnlichkeiten[QUESTIONNAIRE_2] == fragebogen_id) & df_aehnlichkeiten[ITEM_2].isin(
+                fragen_des_fragebogens)
+            ]
+
+        eindeutige_matches = pd.unique(matches[[ITEM_1, ITEM_2]].values.ravel('K'))
+
+        anzahl_eindeutiger_matches = len(set(eindeutige_matches) & set(fragen_des_fragebogens))
+
+        ergebnisse.append({
+            QUESTIONNAIRE_ID: fragebogen_id,
+            NUMBER_OF_QUESTIONS: len(fragen_des_fragebogens),
+            MATCHES: anzahl_eindeutiger_matches,
+            PERCENT_MATCHES: round((anzahl_eindeutiger_matches / len(
+                fragen_des_fragebogens)) * 100 if fragen_des_fragebogens.size > 0 else 0, 2)
+        })
+
+        # Ergebnis in einen DataFrame umwandeln
+
+    result_matching_df = pd.DataFrame(ergebnisse).sort_values(by=NUMBER_OF_QUESTIONS, ascending=False)
+    st.data_editor(result_matching_df, use_container_width=True, column_config={
+        PERCENT_MATCHES: st.column_config.ProgressColumn(
+            help="The cosine similarity score",
+            format="%.2f",  # Corrected format specification
+            min_value=0,
+            max_value=100,
+        ),
+    })
+    # Dropdown zur Auswahl der Sortieroption.
+    sort_option = st.selectbox(
+        'Choose your sort column:',
+        options=[PERCENT_MATCHES, NUMBER_OF_QUESTIONS, MATCHES],
+        format_func=lambda x: PERCENT_MATCHES if x == PERCENT_MATCHES else
+        NUMBER_OF_QUESTIONS if x == NUMBER_OF_QUESTIONS else
+        MATCHES
+    )
+    # DataFrame sortieren basierend auf der gewählten Option.
+    sorted_df = result_matching_df.sort_values(by=sort_option, ascending=False)
+    # Erstellen der Plotly Figure mit sortierten Daten.
+    fig_1 = go.Figure()
+    fig_1.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[NUMBER_OF_QUESTIONS],
+                           name=NUMBER_OF_QUESTIONS, opacity=0.7))
+    fig_1.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[MATCHES],
+                           name=MATCHES, opacity=0.7))
+    fig_1.update_layout(barmode='overlay')  # Overlay der Balken
+    # Streamlit-Befehl zur Anzeige des Plots unter Verwendung der Containerbreite.
+    st.plotly_chart(fig_1, use_container_width=True)
 
 
 
 ####################################
 
-if 'metadata' not in st.session_state:
+if METADATA not in st.session_state:
     st.session_state.metadata = None
 
-if 'embedding' not in st.session_state:
-    st.session_state.embedding = None
+if EMBEDDING not in st.session_state:
+    st.session_state[EMBEDDING] = pd.DataFrame()
 
-if 'similarity' not in st.session_state:
+if SIMILARITY not in st.session_state:
     st.session_state.similarity = None
 
-if 'selected_item_column' not in st.session_state:
+if SELECTED_ITEM_COLUMN not in st.session_state:
     st.session_state.selected_item_column = None
 
-if 'selected_questionnaire_column' not in st.session_state:
+if QUESTIONNAIRE_COLUMN not in st.session_state:
     st.session_state.selected_questionnaire_column = None
 
-if 'selected_data' not in st.session_state:
+if SELECTED_DATA not in st.session_state:
     st.session_state.selected_data = pd.DataFrame()
 
-if "df_filtered" not in st.session_state:
+if DF_FILTERED not in st.session_state:
     st.session_state.df_filtered = None
 
 if 'username' not in st.session_state:
     st.session_state['username'] = ''
 if 'password' not in st.session_state:
     st.session_state['password'] = ''
-if 'loincdf' not in st.session_state:
-    st.session_state["loincdf"] = pd.DataFrame()
+if LOINCDF not in st.session_state:
+    st.session_state[LOINCDF] = pd.DataFrame()
 
 #############
 
@@ -599,11 +693,8 @@ st.title("📒 Semantic Search Helper")
 # select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
 
 with st.sidebar:
-
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
     "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
-
-
 
 status_container = st.container()
 if st.session_state.metadata is None:
@@ -613,11 +704,11 @@ else:
                                            + str(len(st.session_state.metadata)) + ' rows')
 
 emb_status_container = st.container()
-if st.session_state.embedding is None:
+if st.session_state[EMBEDDING] is None:
     emb_status = emb_status_container.info('Step 2 not done yet')
 else:
     emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
-                                              + str(len(st.session_state.embedding)) + ' rows')
+                                              + str(len(st.session_state[EMBEDDING])) + ' rows')
 
 sim_status_container = st.container()
 if st.session_state.similarity is None:
@@ -631,16 +722,75 @@ load_tab, embedding_tab, pair_tab, similarity_tab = st.tabs(
      "Step 4: Select and Explore Pairs"])
 
 
-def show_preview_table(df_in):
-    # Check if combined_df has been saved in the session_state and display it.
-    if "loincdf" in st.session_state:
-        # st.dataframe(st.session_state["loincdf"])
-        st.subheader("Metadata Preview:")
-        AgGrid(df_in, theme="streamlit", height=300, key="loinc_grid",
-               columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS)
-        # spreadsheet(st.session_state["loincdf"])
-    else:
-        st.error("No data loaded. Please select at least one questionnaire.")
+def show_aggrid_table(df_in, msg, key):
+    st.subheader(msg)
+    st.write(df_in)
+    # AgGrid(df_in, theme="streamlit", height=300, key=key,
+    #           columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS)
+
+
+def draw_load_barchart():
+    # Altair-Diagramm erstellen
+    bars = alt.Chart(sorted_question_counts).mark_bar(opacity=0.9).encode(
+        x=alt.X(f'{questionnaire_column}:N', sort=None, title='Questionnaire'),
+        y=alt.Y('Number of Questions:Q', title='Number of Questions'),
+        tooltip=[f'{questionnaire_column}', 'Number of Questions'],
+        # color=alt.Color(f'{questionnaire_column}:N', legend=None)
+        # Legende entfernen, falls Farbe nur zur Unterscheidung dient
+    )
+    # Text über Balken
+    text = bars.mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-5  # Verschiebung nach oben, um den Text über die Balken zu setzen
+    ).encode(
+        text='Number of Questions:Q'
+    )
+    # Kombiniere Balken und Text
+    chart = (bars + text).properties(
+        title='Count of Items per Questionnaire',
+        height=600  # Setze eine spezifische Höhe
+    )
+    # Zeige das Diagramm in Streamlit an, ohne use_container_width=True, um die Höhe anzupassen
+    st.altair_chart(chart, use_container_width=True)
+
+
+def show_explore_sim_tab(model_used):
+    # Berechne den Mittelwert für ADA
+    with st.expander("Explore Similarity Buidling Step", expanded=True):
+        st.data_editor(st.session_state.similarity, use_container_width=True, column_config={
+            SIMILARITY_SCORE: st.column_config.ProgressColumn(
+                "Similarity",
+                help="The cosine similarity score",
+                format="%.2f",
+                min_value=0,
+                max_value=1,
+            ),
+        }, key=f"data_frame_sim_{model_used}")
+
+        st.divider()
+
+        mean_ada = st.session_state.similarity[SIMILARITY_SCORE].mean()
+        # Erstelle ein Histogramm für die ADA-Scores
+        chart = alt.Chart(st.session_state.similarity).mark_bar(opacity=0.7).encode(
+            x=alt.X(f'{SIMILARITY_SCORE}:Q', bin=alt.Bin(step=0.01), title='Cosine Similarity Score'),
+            y=alt.Y('count()', title='Frequency'),
+            tooltip=[alt.Tooltip('count()', title='Frequency'),
+                     alt.Tooltip(f'mean({SIMILARITY_SCORE}):Q', title='Mean Score')]
+        ).properties(
+            title=f'Cosine Similarity Distribution for {model_used}'
+        )
+        # Mittelwert als Linie hinzufügen
+        mean_line = alt.Chart(pd.DataFrame({'mean_ada': [mean_ada]})).mark_rule(color='yellow').encode(
+            x='mean_ada:Q'
+        )
+        # Kombiniere das Histogramm mit der Mittelwert-Linie
+        final_chart = (chart + mean_line).properties(
+            width=600,  # Anpassen der Breite des Diagramms
+            height=400  # Anpassen der Höhe des Diagramms
+        )
+        # Zeige das Diagramm in Streamlit an
+        st.altair_chart(final_chart, use_container_width=True)
 
 
 # Create a tab for loading data
@@ -648,18 +798,20 @@ with load_tab:
     # Radio button for user to choose between using pre-selected LOINC data or uploading new data
     input_in = st.radio("Upload Metadata from:", ["LOINC-Upload", "New Upload"], horizontal=True)
 
+    st.divider()
+
     # If user selects "LOINC-Selection" and there is pre-loaded LOINC data, use that data
     if input_in == "LOINC-Upload" and st.session_state["loincdf"] is not None:
         render_loinc_search()
         loaded_file = st.session_state["loincdf"]
         if loaded_file is not None:
-            show_preview_table(loaded_file)
+            show_aggrid_table(loaded_file, msg="Metadata Preview:", key="loinc_grid")
 
     # If user chooses "New Upload" or there is no pre-loaded LOINC data, prompt for new data upload
     if input_in == "New Upload" or st.session_state["loincdf"] is None:
         loaded_file = get_data()
         if loaded_file is not None:
-            show_preview_table(loaded_file)
+            show_aggrid_table(loaded_file, msg="Metadata Preview:", key="upload_grid")
 
     # If data is successfully loaded, proceed
     if loaded_file is not None:
@@ -673,7 +825,7 @@ with load_tab:
         with col1:
             # Dropdown for user to select the column containing questionnaire names
             selected_questionnaire_column = st.selectbox("Select the columns with the questionnaire names.",
-                                                     loaded_file.columns)
+                                                         loaded_file.columns)
 
         # Button to confirm data selection
         if st.button('use data', type='primary', key="save_data"):
@@ -681,41 +833,28 @@ with load_tab:
             st.session_state.metadata = loaded_file
             st.session_state.selected_item_column = selected_item_column
             st.session_state.selected_questionnaire_column = selected_questionnaire_column
+            st.session_state[EMBEDDING] = pd.DataFrame()
             meta_status.empty()
             meta_status = status_container.success(
                 'Step 1 done! Data selected containing ' + str(len(st.session_state.metadata)) + ' rows')
 
-            # Counting unique questions per questionnaire
+            # Annahme, dass 'data' dein DataFrame ist und korrekt initialisiert wurde
             data = st.session_state.metadata
             item_column = st.session_state.selected_item_column
             questionnaire_column = st.session_state.selected_questionnaire_column
-            question_counts = data.groupby(questionnaire_column)[item_column].nunique()
-            sorted_question_counts = question_counts.sort_values(ascending=False)
 
-            # Vorbereiten der Daten für das Highcharts-Diagramm
-            categories = sorted_question_counts.index.tolist()  # Fragebogen-Namen
-            data_series = sorted_question_counts.values.tolist()  # Anzahl der Fragen
+            # Berechne die Anzahl der einzigartigen Fragen pro Fragebogen
+            question_counts = data.groupby(questionnaire_column)[item_column].nunique().reset_index(
+                name='Number of Questions')
 
+            # Sortiere die Fragebögen nach der Anzahl der Fragen
+            sorted_question_counts = question_counts.sort_values(by='Number of Questions', ascending=False)
 
-            st.success(f"Saved metadata of {len(categories)} instruments "
-                       f"and {sum(data_series)} items for semantic search")
+            # Erfolgsmeldung anzeigen
+            st.success(f"Saved metadata of {len(sorted_question_counts)} instruments "
+                       f"and {sorted_question_counts['Number of Questions'].sum()} items for semantic search")
 
-            # Anpassen des chartDef-Objekts für das Balkendiagramm
-            chartDef = {
-                'chart': {'type': 'column'},
-                'title': {'text': 'Count of Items per Questionnaire'},
-                'xAxis': {'categories': categories, 'title': {'text': 'Questionnaire'}},
-                'yAxis': {'min': 0, 'title': {'text': 'Number of Questions'}, 'allowDecimals': False},
-                'legend': {'enabled': False},
-                'plotOptions': {'column': {'dataLabels': {'enabled': True}}},
-                'series': [{
-                    'name': 'Questions',
-                    'data': data_series,
-                    'colorByPoint': True  # Färbt jede Säule individuell
-                }]
-            }
-            # Anzeigen des Highcharts-Diagramms in Streamlit
-            hg.streamlit_highcharts(chartDef, height=640)
+            draw_load_barchart()
 
 with embedding_tab:
     if st.session_state.metadata is None:
@@ -723,9 +862,9 @@ with embedding_tab:
     else:
         embedding_container = st.container()
         model_options = embedding_container.radio(
-            "Data Usage", options=["ADA", "SBERT"], horizontal=True
+            "Data Usage", options=[MODEL_ADA, MODEL_SBERT], horizontal=True
         )
-        if model_options == "ADA":
+        if model_options == MODEL_ADA:
             # Get data uploaded by the user
             model = embedding_container.selectbox("Select a model to process",
                                                   ["text-embedding-ada-002", "text-embedding-3-small"])
@@ -743,11 +882,12 @@ with embedding_tab:
                                               type='primary', key=f"{model_options}_button"):
                     start_time_em = time.time()
                     df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
+                    st.session_state.embedding = df_embedding
 
                     if df_embedding is not None:
-                        st.write(df_embedding[[selected_item_column, "embedding"]])
+                        st.data_editor(df_embedding[[selected_item_column, EMBEDDING]], use_container_width=True)
                         # if embedding_container.button("Save", type='primary',key='save_emb'):
-                        st.session_state.embedding = df_embedding
+
                         # embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
                         end_time_em = time.time()
                         duration_em = end_time_em - start_time_em
@@ -760,7 +900,7 @@ with embedding_tab:
                                                                   str(len(df_embedding.embedding[0]))
                                                                   + f' in {duration_minutes_em:.2f} minutes')
 
-        if model_options == "SBERT":
+        if model_options == MODEL_SBERT:
             model = embedding_container.selectbox("Select a model to process",
                                                   ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
 
@@ -773,29 +913,68 @@ with embedding_tab:
                                           type='primary', key=f"{model_options}_button"):
                 start_time_em = time.time()
                 df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
+                st.session_state[EMBEDDING] = df_embedding
+                end_time_em = time.time()
+                duration_em = end_time_em - start_time_em
+                duration_minutes_em = duration_em / 60
+                emb_status.empty()
+                emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
+                                                          + str(len(df_embedding)) +
+                                                          " rows with a vector size of " +
+                                                          str(len(list(df_embedding)[0]))
+                                                          + f' in {duration_minutes_em:.2f} minutes')
 
-                if df_embedding is not None:
-                    st.write(df_embedding[[selected_item_column, "embedding"]])
-                    # if embedding_container.button("Save", type='primary',key='save_emb'):
-                    st.session_state.embedding = df_embedding
-                    # embedding_container.info(f"Your data was stored move to tab 'View Similarity'")
-                    end_time_em = time.time()
-                    duration_em = end_time_em - start_time_em
-                    duration_minutes_em = duration_em / 60
+        if st.session_state[EMBEDDING] is not None:
+            embeddings_for_pca = list(st.session_state[
+                                          EMBEDDING])  # Angenommen, Embeddings sind in einer Spalte gespeichert und müssen in ein geeignetes Format konvertiert werden
 
-                    emb_status.empty()
-                    emb_status = emb_status_container.success('Step 2 done! Embeddings build containing '
-                                                              + str(len(st.session_state.embedding)) +
-                                                              " rows with a vector size of " +
-                                                              str(len(df_embedding.embedding[0]))
-                                                              + f' in {duration_minutes_em:.2f} minutes')
+            # Durchführen der PCA
+            # pca = PCA(n_components=2)
+            # reduced_embeddings = pca.fit_transform(embeddings_for_pca)
+
+            # Erstellen eines neuen DataFrames für die reduzierten Daten
+            # df_reduced = pd.DataFrame(reduced_embeddings, columns=['PC1', 'PC2'])
+            # df_reduced['sentence'] = st.session_state.embedding[
+            #    selected_item_column]  # Füge die Sätze oder Identifikatoren wieder hinzu
+
+            umap_model = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine')
+            reduced_embeddings = umap_model.fit_transform(list(st.session_state[EMBEDDING][EMBEDDING]))
+
+            # clusterer = hdbscan.HDBSCAN(min_cluster_size=80, min_samples=40)
+            # clusterer.fit(reduced_embeddings)
+            # clusterer.condensed_tree_.plot(select_clusters=True)
+
+            # Erstelle einen DataFrame für die reduzierten Embeddings
+            df_reduced = pd.DataFrame(reduced_embeddings, columns=['UMAP 1', 'UMAP 2', "UMAP 3"])
+            df_reduced['sentence'] = st.session_state[EMBEDDING][selected_item_column]
+
+            fig_2 = px.scatter(df_reduced, x='UMAP 1', y='UMAP 2', hover_data=['sentence'])
+
+            # Visualisierung mit Plotly
+            fig = px.scatter_3d(
+                df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3",
+                title=f'Total Explained Variance:',
+                labels={'0': 'UMAP 1', '1': 'UMAP 2', '2': 'UMAP 3'},
+                hover_data=['sentence']
+            )
+            st.plotly_chart(fig_2, use_container_width=True)
+
+            # Aktualisiere das Layout
+            # fig.update_layout(
+            #    title='UMAP of Sentence Embeddings',
+            #    xaxis_title='UMAP Dimension 1',
+            #    yaxis_title='UMAP Dimension 2'
+            # )
+
+            # Zeige den Plot in Streamlit
+            st.plotly_chart(fig, use_container_width=True)
 
 with pair_tab:
-    if st.session_state.metadata is None and st.session_state.embedding is None:
+    if st.session_state.metadata is None and st.session_state[EMBEDDING] is None:
         st.info('You have to select data and build embeddings in order to view similarity')
     else:
         pair_container = st.container()
-        data = st.session_state.embedding
+        data = st.session_state[EMBEDDING]
         selected_item_column = st.session_state.selected_item_column
         selected_questionnaire_column = st.session_state.selected_questionnaire_column
 
@@ -815,6 +994,11 @@ with pair_tab:
                                                       + str(len(st.session_state.similarity))
                                                       + f' pairs in {duration_minutes:.2f} minutes')
 
+        if st.session_state.similarity is not None:
+            show_explore_sim_tab(model_options)
+
+
+
 with similarity_tab:
     if st.session_state.similarity is None:
         st.info('You have to select data and build embeddings for viewing similarity')
@@ -823,23 +1007,17 @@ with similarity_tab:
         df_sim = st.session_state.similarity
 
         with sim_container.expander("Filtering"):
-            st.subheader('Initial DataFrame')
-            AgGrid(df_sim, height=300, theme="streamlit", key="filter_grid", columns_auto_size_mode= ColumnsAutoSizeMode.FIT_CONTENTS)
-            #st.dataframe(df_sim, use_container_width=True)
-
             st.subheader('Filter tree')
             st.session_state.df_filtered = dataframe_explorer(df_sim, case=False)
-            st.dataframe(st.session_state.df_filtered, use_container_width=True)
-
-
-            st.download_button(
-                    label=f"Download whole filtered table with "
-                          f"{len(st.session_state.df_filtered)} elements as Excel file",
-                    data=convert_df_to_excel(st.session_state.df_filtered),
-                    file_name='ssh_download_filtered_selection_table.xlsx',
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                )
-
+            st.data_editor(st.session_state.df_filtered, use_container_width=True, column_config={
+                SIMILARITY_SCORE: st.column_config.ProgressColumn(
+                    "Similarity",
+                    help="The cosine similarity score",
+                    format="%.2f",
+                    min_value=0,
+                    max_value=1,
+                ),
+            }, key="Filtering")
 
             st.subheader('Filtered DataFrame')
             # df_filtered = df_sim.query(query_string)
@@ -852,17 +1030,9 @@ with similarity_tab:
                 add_to_selection(selection)
 
             st.divider()
-            if 'selected_data' in st.session_state and not st.session_state.selected_data.empty:
+            if SELECTED_DATA in st.session_state and not st.session_state.selected_data.empty:
                 st.subheader("Final Harmonisation Candidates")
                 st.dataframe(st.session_state.selected_data, use_container_width=True)
-
-            csv = convert_df(st.session_state.selected_data)
-            st.download_button(
-                label="Download Final Selection as CSV",
-                data=csv,
-                file_name='final_selection.csv',
-                mime='text/csv'
-            )
 
             excel = convert_df_to_excel(st.session_state.selected_data)
             if excel is not None:
@@ -877,58 +1047,7 @@ with similarity_tab:
 
             render_dependencywheel_view(st.session_state.df_filtered)
 
-            df_frageboegen =  st.session_state.metadata
-            df_aehnlichkeiten = st.session_state.df_filtered
-
-                # Ermitteln, welche Fragen in den Fragepaaren enthalten sind
-            ergebnisse = []
-
-                # Über jeden Fragebogen iterieren
-            for fragebogen_id in df_frageboegen[st.session_state.selected_questionnaire_column].unique():
-                    # Fragen des aktuellen Fragebogens extrahieren
-                fragen_des_fragebogens = df_frageboegen[
-                    df_frageboegen[st.session_state.selected_questionnaire_column] ==
-                    fragebogen_id][st.session_state.selected_item_column]
-
-                    # Anzahl der Fragen dieses Fragebogens, die in den Ähnlichkeitspaaren vorkommen, ermitteln
-                matches = df_aehnlichkeiten[
-                        (df_aehnlichkeiten['Questionnaire 1'] == fragebogen_id) & df_aehnlichkeiten['Item 1'].isin(
-                            fragen_des_fragebogens) |
-                        (df_aehnlichkeiten['Questionnaire 2'] == fragebogen_id) & df_aehnlichkeiten['Item 2'].isin(
-                            fragen_des_fragebogens)
-                        ]
-
-                    # Eindeutige Fragen mit einem Match zählen
-                eindeutige_matches = pd.unique(matches[['Item 1', 'Item 2']].values.ravel('K'))
-
-                anzahl_eindeutiger_matches = len(set(eindeutige_matches) & set(fragen_des_fragebogens))
-
-                ergebnisse.append({
-                        'FragebogenID': fragebogen_id,
-                        'AnzahlFragen': len(fragen_des_fragebogens),
-                        'AnzahlMatches': anzahl_eindeutiger_matches,
-                        'ProzentMatches': (anzahl_eindeutiger_matches / len(
-                            fragen_des_fragebogens)) * 100 if fragen_des_fragebogens.size > 0 else 0
-                    })
-
-                    # Ergebnis in einen DataFrame umwandeln
-            ergebnisse_df = pd.DataFrame(ergebnisse).sort_values(by="AnzahlFragen")
-
-            import plotly.express as px
-
-            st.write(ergebnisse_df)
-
-            fig = px.histogram(ergebnisse_df, x="FragebogenID", y=["AnzahlFragen", "AnzahlMatches"], barmode="overlay", hover_data= ergebnisse_df.columns)
-            st.plotly_chart(fig, theme="streamlit", use_container_width=True)
-
-            #st.bar_chart(ergebnisse_df.sort_values(ascending=False, by="ProzentMatches"),  x="FragebogenID", y=["AnzahlFragen", "AnzahlMatches"])
-
+            render_match_view()
 
             render_graph_view()
-            render_heatmap_view()
-
-
-
-
-
-
+            # render_heatmap_view()
