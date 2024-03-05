@@ -4,6 +4,7 @@ import time
 from sklearn.metrics.pairwise import cosine_similarity
 import altair as alt
 import pandas as pd
+import plotly.graph_objects as go
 
 
 def show_explore_sim_tab(model_used):
@@ -18,32 +19,48 @@ def show_explore_sim_tab(model_used):
                 min_value=0,
                 max_value=1,
             ),
-        }, key=f"data_frame_sim_{model_used}")
+        }, key=f"data_frame_sim_{model_used}", hide_index=True)
 
         st.divider()
 
-        # Calculate the mean similarity score
+        # Berechnung der durchschnittlichen Ähnlichkeitsbewertung
         mean_ada = st.session_state.similarity[SIMILARITY_SCORE].mean()
-        # Create a histogram for ADA scores
-        chart = alt.Chart(st.session_state.similarity).mark_bar(opacity=0.7).encode(
-            x=alt.X(f'{SIMILARITY_SCORE}:Q', bin=alt.Bin(step=0.01), title='Cosine Similarity Score'),
-            y=alt.Y('count()', title='Frequency'),
-            tooltip=[alt.Tooltip('count()', title='Frequency'),
-                     alt.Tooltip(f'mean({SIMILARITY_SCORE}):Q', title='Mean Score')]
-        ).properties(
-            title=f'Cosine Similarity Distribution for {model_used}'
+
+        # Erstellung des Histogramms für ADA-Bewertungen
+        fig = go.Figure()
+
+        # Hinzufügen der Histogramm-Bars
+        fig.add_trace(go.Histogram(
+            x=st.session_state.similarity[SIMILARITY_SCORE],
+            opacity=0.7,
+            nbinsx=int((st.session_state.similarity[SIMILARITY_SCORE].max() - st.session_state.similarity[
+                SIMILARITY_SCORE].min()) / 0.01),  # Anzahl der Bins basierend auf der Schrittgröße 0.01
+            name='Frequency'  # Name der Spur
+        ))
+
+        # Hinzufügen der Mittelwertlinie
+        fig.add_shape(type='line',
+                      x0=mean_ada, y0=0,
+                      x1=mean_ada, y1=1,
+                      xref='x', yref='paper',  # xref und yref spezifizieren die Bezüge
+                      line=dict(color='Yellow', width=3)  # Linienfarbe und -dicke
+                      )
+
+        # Anpassen des Layouts
+        fig.update_layout(
+            title_text=f'Cosine Similarity Distribution for {model_used}',
+            xaxis_title='Cosine Similarity Score',
+            yaxis_title='Frequency',
+            bargap=0.2,  # Abstand zwischen den Bars
+            width=600,  # Breite des Graphen
+            height=400  # Höhe des Graphen
         )
-        # Add the mean value line to the histogram
-        mean_line = alt.Chart(pd.DataFrame({'mean_ada': [mean_ada]})).mark_rule(color='yellow').encode(
-            x='mean_ada:Q'
-        )
-        # Combine the histogram with the mean line
-        final_chart = (chart + mean_line).properties(
-            width=600,  # Adjust the width of the chart
-            height=400  # Adjust the height of the chart
-        )
-        # Display the chart in Streamlit
-        st.altair_chart(final_chart, use_container_width=True)
+
+        # Hinzufügen von Hover-Informationen
+        fig.update_traces(hoverinfo='x+y', hovertemplate="Score: %{x}<br>Frequency: %{y}")
+
+        # Anzeigen des Graphen in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def get_similarity_dataframe(df_in, cosine_sim, item_column_in, questionnaire_column_in):

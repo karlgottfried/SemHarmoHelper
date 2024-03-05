@@ -7,39 +7,78 @@ from sentence_transformers import SentenceTransformer  # For sentence embeddings
 from umap.umap_ import UMAP  # UMAP for dimensionality reduction
 import plotly.express as px  # Plotly Express for interactive plots
 # from sklearn.decomposition import PCA  # PCA for alternative dimensionality reduction (commented out)
-# from bertopic import BERTopic  # BERTopic for topic modeling (commented out)
+from bertopic import BERTopic  # BERTopic for topic modeling (commented out)
 import pandas as pd  # Pandas for data manipulation
+import hdbscan
+import numpy as np
 
-
-# import hdbscan  # HDBSCAN for clustering (commented out)
+# import   # HDBSCAN for clustering (commented out)
 # initialize_session_state()  # Initialize Streamlit session state (commented out)
 
 def show_explore_embedding_tab():
-    # Display an interactive section for exploring embedding steps
     with st.expander("Explore Embedding Building Step", expanded=True):
-        # Display editable table of embeddings and selected item columns
-        st.data_editor(st.session_state[EMBEDDING][[st.session_state[SELECTED_ITEM_COLUMN], EMBEDDING]],
-                       use_container_width=True)
-        st.divider()  # Visual divider
-        # Markdown link to UMAP paper for dimensionality reduction
-        st.markdown("Dimensionality Reduction to 3D with [UMAP](https://arxiv.org/abs/1802.03426)")
+        # Annehmen, dass EMBEDDING und SELECTED_ITEM_COLUMN bereits definiert sind
+        sentence = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]].tolist()
 
-        # Set UMAP model parameters for dimensionality reduction
-        umap_model = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine')
-        # Transform embeddings to 3D space using UMAP
-        reduced_embeddings = umap_model.fit_transform(list(st.session_state[EMBEDDING][EMBEDDING]))
+        # Trainieren von BERTopic
+        topic_model = BERTopic(min_topic_size=10)
+        topics, probs = topic_model.fit_transform(sentence, np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
+        #hierarchical_topics = topic_model.hierarchical_topics(sentence)
 
-        # Create DataFrame for reduced embeddings
+        st.data_editor(topic_model.get_topic_info()[["Topic"]], use_container_width=True, hide_index=True)
+
+        # Dimensionalitätsreduktion und Clustering
+        reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=15, gen_min_span_tree=True)
+        clusterer.fit(reduced_embeddings)
+
+        # Displaying the filtered table
+
+        # Vorbereitung der Daten für die Visualisierung
         df_reduced = pd.DataFrame(reduced_embeddings, columns=['UMAP 1', 'UMAP 2', "UMAP 3"])
-        # Add sentences to the DataFrame
-        df_reduced['sentence'] = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]]
+        df_reduced['Sentence'] = sentence  # Fügen Sie Sätze als Spalte hinzu
+        df_reduced['Topic'] = [f"Topic {topic}" for topic in topics]  # Fügen Sie Themen als Spalte hinzu
 
-        # Visualize the 3D embeddings with Plotly scatter plot
+        #st.write(topic_model.get_topic_info().columns())
+
+
+        # Visualisierung der reduzierten Einbettungen mit Plotly
         fig_3d = px.scatter_3d(
             df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3",
-            hover_data={'UMAP 1': False, 'UMAP 2': False, 'UMAP 3': False, 'sentence': True}
+            color='Topic', hover_data=["Sentence","Topic"],  # Fügen Sie hier die Sätze und Themen zum Hover hinzu
+            color_continuous_scale=px.colors.qualitative.Bold,
+            labels={"color": "Topic"}  # Benennen Sie die Farblegende um
         )
-        st.plotly_chart(fig_3d, use_container_width=True)  # Display the plot
+        fig_3d.update_traces(hovertemplate='Sentence: %{customdata[0]}<br>Topic: %{customdata[1]}')
+        st.plotly_chart(fig_3d, use_container_width=True)
+
+
+
+
+def show_explore_embedding_tab_2():
+    with st.expander("Explore Embedding Building Step", expanded=True):
+        st.data_editor(st.session_state[EMBEDDING][[st.session_state[SELECTED_ITEM_COLUMN], EMBEDDING]], use_container_width=True, hide_index=True)
+        st.divider()
+        st.markdown("Dimensionality Reduction to 3D with [UMAP](https://arxiv.org/abs/1802.03426)")
+
+        umap_model = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine')
+        reduced_embeddings = umap_model.fit_transform(list(st.session_state[EMBEDDING][EMBEDDING]))
+
+        df_reduced = pd.DataFrame(reduced_embeddings, columns=['UMAP 1', 'UMAP 2', "UMAP 3"])
+        df_reduced['Sentence'] = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]]
+
+        # Clustering mit HDBSCAN
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=15, gen_min_span_tree=True)
+        clusterer.fit(reduced_embeddings)
+        df_reduced['cluster'] = clusterer.labels_
+
+        # Visualisierung der Cluster
+        fig_3d = px.scatter_3d(
+            df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3",
+            color="cluster", hover_data={'UMAP 1': False, 'UMAP 2': False, 'UMAP 3': False, 'Sentence': True},
+            color_continuous_scale=px.colors.qualitative.Bold
+        )
+        st.plotly_chart(fig_3d, use_container_width=True)
 
 
 def get_embedding(text, model):
@@ -67,11 +106,13 @@ def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
             # Calculate embeddings and normalize them
             output = model_in.encode(sentences=sentences_in.tolist(), show_progress_bar=True, normalize_embeddings=True)
             data_in[EMBEDDING] = list(output)  # Store embeddings in DataFrame
+            st.session_state["step2_completed"] = True
 
         # If OpenAI's ADA model is selected
         if model_selected == MODEL_ADA:
             # Calculate embeddings using the OpenAI model
             data_in[EMBEDDING] = sentences_in.apply(lambda x: get_embedding(x, model_name))
+            st.session_state["step2_completed"] = True
         return data_in  # Return DataFrame with embeddings
 
 
@@ -125,7 +166,7 @@ def show_embedding_tab():
                                                   ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
             selected_item_column = st.session_state.selected_item_column  # Column with text
             df = st.session_state.metadata  # Load metadata
-            sentences = df[selected_item_column].tolist()  # Extract sentences
+#            sentences = df[selected_item_column].tolist()  # Extract sentences
 
             # Button to trigger embeddings calculation
             if embedding_container.button(f"Calculate {model_options} embeddings", type='primary',
