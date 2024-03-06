@@ -1,7 +1,6 @@
 # config.py
-import pandas as pd
 import streamlit as st
-
+import pandas as pd
 
 COPYRIGHT_LOINC = "Copyright"
 RESPONSE_DISPLAY_LOINC = "Response (Display)"
@@ -10,9 +9,10 @@ CODE_LOINC = "Code"
 QUESTIONNAIRE_LOINC = "Questionnaire"
 
 PERCENT_MATCHES = 'Percent Matches (%)'
-MATCHES = 'Number Of Matches'
+ITEM_MATCHES = 'Number Of Item Matches'
 NUMBER_OF_QUESTIONS = 'Number Of Questions'
-QUESTIONNAIRE_ID = 'Questionnaire ID'
+QUESTIONNAIRE_ID = 'Questionnaire'
+QUESTIONNAIRE_MATCHES = "Questionnaire Matches"
 
 LOINCDF = 'loincdf'
 DF_FILTERED = "df_filtered"
@@ -21,9 +21,6 @@ QUESTIONNAIRE_COLUMN = 'selected_questionnaire_column'
 SELECTED_ITEM_COLUMN = 'selected_item_column'
 SIMILARITY = 'similarity'
 METADATA = 'metadata'
-
-STEP_LOAD_SENTENCE_DATA = 'Step 1: Load Sentence Data'
-
 
 SELECT = "Select"
 EMBEDDING = "Embedding"
@@ -36,36 +33,15 @@ MODEL_SBERT = "SBERT"
 SIMILARITY_SCORE = 'Similarity score'
 SAMPLE_FILE_CSV = 'resources/Example_Metadata.xlsx'
 
-STATUS_MESSAGES = {
-    "step1_completed": "Step 1 done! Data selected containing {rows} rows",
-    "step1_pending": "Step 1 not done yet",
-    "step2_completed": "Step 2 done! Embeddings built containing {rows} rows in {minutes} minutes",
-    "step2_pending": "Step 2 not done yet",
-    "step3_completed": "Step 3 done! Similarity scores built between {pairs} pairs",
-    "step3_pending": "Step 3 not done yet",
-    "reset_confirmation": "Are you sure you want to reset all progress?",
-}
+STEP_LOAD_SENTENCE_DATA = 'Step 1: Load Sentence Data'
+STEP_BUILD_EMBEDDINGS = 'Step 2: Build Embeddings'
+STEP_BUILD_SIMILARITY_PAIRS = 'Step 3: Build Similarity Pairs'
+STEP_SELECT_AND_EXPLORE_PAIRS = "Step 4: Select and Explore Pairs"
 
+# Constants for the application
+FILE_TYPES = ["csv", "xlsx", "xls"]
+LOINC_BASE_URL = "https://fhir.loinc.org/"
+SAMPLE_FILE_PATH = "path/to/your/sample_file.csv"  # Update this path
 
-# Definieren eines Dictionaries mit Standardwerten
-default_values = {
-    'metadata': None,
-    EMBEDDING: None,
-    'similarity': None,
-    'selected_item_column': None,
-    'selected_questionnaire_column': None,
-    'selected_data': pd.DataFrame(),
-    'df_filtered': None,
-    'username': '',
-    'password': '',
-    LOINCDF: pd.DataFrame(),
-    'model_used': None,
-    "duration_minutes_em": None,
-}
-
-
-def initialize_session_state():
-    for key, value in default_values.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-    st.rerun
+DISPLAY_RADIO_TEXT_2 = "All LOINC-Codes"
+DISPLAY_RADIO_TEXT_1 = "Pre-selection LOINC-Codes"

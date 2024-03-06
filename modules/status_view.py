@@ -1,11 +1,5 @@
-from modules.load_data_tab import show_load_data_tab
-from modules.embedding_tab import show_embedding_tab
-from modules.similarity_pair_tab import show_similarity_pair_tab
-from modules.explore_tab import show_explore_tab
-from config import *  # Import the status messages from the config
-
-st.set_page_config(page_title="Semantic Search Helper", page_icon="2️⃣", layout="wide",
-                   initial_sidebar_state="expanded")
+# Importing Streamlit as st
+from config import *
 
 # Defining a dictionary with default values
 default_values = {
@@ -63,31 +57,3 @@ def display_status_updates():
             sim_status_container.success("Step 3 completed!")
         else:
             sim_status_container.info("Step 3 not done yet.")
-
-
-st.title("📒 Semantic Search Helper")
-# select_tab, view_tab, store_tab = st.tabs(['Load Sentence Data', 'Build Embeddings', 'View Similarity'])
-
-with st.sidebar:
-    "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
-    "[View the source code](https://github.com/karlgottfried/SemHarmoHelper/blob/main/app.py)"
-
-initialize_session_state()
-# Display the status updates
-display_status_updates()
-
-load_tab, embedding_tab, pair_tab, explore_tab = st.tabs(
-    [STEP_LOAD_SENTENCE_DATA, 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs',
-     "Step 4: Select and Explore Pairs"])
-
-with load_tab:
-    show_load_data_tab()
-
-with embedding_tab:
-    show_embedding_tab()
-
-with pair_tab:
-    show_similarity_pair_tab()
-
-with explore_tab:
-    show_explore_tab()

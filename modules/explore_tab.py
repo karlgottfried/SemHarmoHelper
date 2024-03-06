@@ -1,4 +1,3 @@
-import streamlit as st
 import io
 from config import *  # Import all variables from config module
 from pyvis.network import Network
@@ -196,7 +195,7 @@ def render_heatmap_view():
         index=QUESTIONNAIRE_1,
         columns=QUESTIONNAIRE_2,
         values=SIMILARITY_SCORE,
-        aggfunc=lambda x: (x >= threshold).sum()
+        aggfunc=lambda x: x.sum()
     ).fillna(0)
 
     # Convert the pivoted table into a list of scores in the format [y_index, x_index, value]
@@ -268,7 +267,7 @@ def render_heatmap_view():
         return options
 
     # Create the chart with the data
-    heatmap_options = create_heatmap(questionnaires, comparisons, scores)
+    # heatmap_options = create_heatmap(questionnaires, comparisons, scores)
     # st_echarts(options=heatmap_options, height="500px")
 
 
@@ -284,7 +283,6 @@ def render_graph_view(df_sim):
     """
 
     # Define a global threshold variable to be used across the application
-    global threshold
 
     # Allow the user to choose between viewing all data or a filtered subset
     physics = st.selectbox('Choose a Graph', ["Filter", "All"])
@@ -311,67 +309,87 @@ def render_graph_view(df_sim):
 
 
 def render_match_view():
-    df_frageboegen = st.session_state.metadata
-    df_aehnlichkeiten = st.session_state.df_filtered
-    # Ermitteln, welche Fragen in den Fragepaaren enthalten sind
-    ergebnisse = []
-    # Über jeden Fragebogen iterieren
-    for fragebogen_id in df_frageboegen[st.session_state.selected_questionnaire_column].unique():
-        # Fragen des aktuellen Fragebogens extrahieren
-        fragen_des_fragebogens = df_frageboegen[
-            df_frageboegen[st.session_state.selected_questionnaire_column] ==
-            fragebogen_id][st.session_state.selected_item_column]
+    """
+    Render a match view to display questionnaire matches based on similarity scores.
+    This view iterates through each questionnaire, determining the number of questions
+    that match based on similarity pairs and displays the results in a sortable table and bar chart.
+    """
+    questionnaires_df = st.session_state.metadata
+    similarities_df = st.session_state.df_filtered
+    results = []  # Initialize a list to store results
 
-        # Anzahl der Fragen dieses Fragebogens, die in den Ähnlichkeitspaaren vorkommen, ermitteln
-        matches = df_aehnlichkeiten[
-            (df_aehnlichkeiten[QUESTIONNAIRE_1] == fragebogen_id) & df_aehnlichkeiten[ITEM_1].isin(
-                fragen_des_fragebogens) |
-            (df_aehnlichkeiten[QUESTIONNAIRE_2] == fragebogen_id) & df_aehnlichkeiten[ITEM_2].isin(
-                fragen_des_fragebogens)
+    # Iterate through each questionnaire
+    for questionnaire_id in questionnaires_df[st.session_state.selected_questionnaire_column].unique():
+        # Extract questions of the current questionnaire
+        questionnaire_questions = questionnaires_df[
+            questionnaires_df[st.session_state.selected_questionnaire_column] == questionnaire_id
+            ][st.session_state.selected_item_column]
+
+        # Determine the number of questions of this questionnaire appearing in the similarity pairs
+        matches = similarities_df[
+            (similarities_df[QUESTIONNAIRE_1] == questionnaire_id) & similarities_df[ITEM_1].isin(
+                questionnaire_questions) |
+            (similarities_df[QUESTIONNAIRE_2] == questionnaire_id) & similarities_df[ITEM_2].isin(
+                questionnaire_questions)
             ]
+        unique_matches = pd.unique(matches[[ITEM_1, ITEM_2]].values.ravel('K'))
+        num_unique_matches = len(set(unique_matches) & set(questionnaire_questions))
 
-        eindeutige_matches = pd.unique(matches[[ITEM_1, ITEM_2]].values.ravel('K'))
+        questionnaire_matches = set(matches[QUESTIONNAIRE_1].tolist() + matches[QUESTIONNAIRE_2].tolist())
+        questionnaire_matches.discard(questionnaire_id)  # Remove the current questionnaire from the set
+        num_questionnaire_matches = list(questionnaire_matches)
 
-        anzahl_eindeutiger_matches = len(set(eindeutige_matches) & set(fragen_des_fragebogens))
+        empty_rows = []
+        if len(num_questionnaire_matches) == 0:
+            empty_rows.append(questionnaire_id)
 
-        ergebnisse.append({
-            QUESTIONNAIRE_ID: fragebogen_id,
-            NUMBER_OF_QUESTIONS: len(fragen_des_fragebogens),
-            MATCHES: anzahl_eindeutiger_matches,
-            PERCENT_MATCHES: round((anzahl_eindeutiger_matches / len(
-                fragen_des_fragebogens)) * 100 if fragen_des_fragebogens.size > 0 else 0, 2)
-        })
+        else:  # Append the result for the current questionnaire to the results list
+            results.append({
+                QUESTIONNAIRE_ID: questionnaire_id,
+                NUMBER_OF_QUESTIONS: len(questionnaire_questions),
+                ITEM_MATCHES: num_unique_matches,
+                QUESTIONNAIRE_MATCHES: num_questionnaire_matches,
+                PERCENT_MATCHES: round(
+                    (num_unique_matches / len(questionnaire_questions)) * 100 if questionnaire_questions.size > 0 else 0, 2),
 
-        # Ergebnis in einen DataFrame umwandeln
+            })
 
-    result_matching_df = pd.DataFrame(ergebnisse).sort_values(by=NUMBER_OF_QUESTIONS, ascending=False)
+    st.info(f"The following {len(empty_rows)} questionnaires do not have any suited matching pairs {list(empty_rows)}")
+    # Convert the results into a DataFrame and sort it by the number of questions
+    result_matching_df = pd.DataFrame(results).sort_values(by=NUMBER_OF_QUESTIONS, ascending=False)
+
+    # Display the DataFrame in Streamlit
     st.data_editor(result_matching_df, use_container_width=True, column_config={
         PERCENT_MATCHES: st.column_config.ProgressColumn(
             help="The cosine similarity score",
-            format="%.2f",  # Corrected format specification
+            format="%.2f",
             min_value=0,
             max_value=100,
         ),
-    })
-    # Dropdown zur Auswahl der Sortieroption.
+    }, hide_index=True)
+
+    # Dropdown for choosing the sort column
     sort_option = st.selectbox(
         'Choose your sort column:',
-        options=[PERCENT_MATCHES, NUMBER_OF_QUESTIONS, MATCHES],
+        options=[PERCENT_MATCHES, NUMBER_OF_QUESTIONS, ITEM_MATCHES],
         format_func=lambda x: PERCENT_MATCHES if x == PERCENT_MATCHES else
         NUMBER_OF_QUESTIONS if x == NUMBER_OF_QUESTIONS else
-        MATCHES
+        ITEM_MATCHES
     )
-    # DataFrame sortieren basierend auf der gewählten Option.
+
+    # Sort the DataFrame based on the selected option
     sorted_df = result_matching_df.sort_values(by=sort_option, ascending=False)
-    # Erstellen der Plotly Figure mit sortierten Daten.
-    fig_1 = go.Figure()
-    fig_1.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[NUMBER_OF_QUESTIONS],
-                           name=NUMBER_OF_QUESTIONS, opacity=0.7))
-    fig_1.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[MATCHES],
-                           name=MATCHES, opacity=0.7))
-    fig_1.update_layout(barmode='overlay')  # Overlay der Balken
-    # Streamlit-Befehl zur Anzeige des Plots unter Verwendung der Containerbreite.
-    st.plotly_chart(fig_1, use_container_width=True)
+
+    # Create the Plotly Figure with sorted data
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[NUMBER_OF_QUESTIONS],
+                         name=NUMBER_OF_QUESTIONS, opacity=0.7))
+    fig.add_trace(go.Bar(x=sorted_df[QUESTIONNAIRE_ID], y=sorted_df[ITEM_MATCHES],
+                         name=ITEM_MATCHES, opacity=0.7))
+    fig.update_layout(barmode='overlay')  # Overlay bars for comparison
+
+    # Display the plot in Streamlit using container width
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def show_explore_tab():
