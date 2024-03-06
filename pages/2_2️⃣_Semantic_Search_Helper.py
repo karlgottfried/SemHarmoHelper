@@ -77,8 +77,8 @@ initialize_session_state()
 display_status_updates()
 
 load_tab, embedding_tab, pair_tab, explore_tab = st.tabs(
-    [STEP_LOAD_SENTENCE_DATA, 'Step 2: Build Embeddings', 'Step 3: Build Similarity Pairs',
-     "Step 4: Select and Explore Pairs"])
+    [STEP_LOAD_SENTENCE_DATA, STEP_BUILD_EMBEDDINGS, STEP_BUILD_SIMILARITY_PAIRS,
+     STEP_SELECT_AND_EXPLORE_PAIRS])
 
 with load_tab:
     show_load_data_tab()

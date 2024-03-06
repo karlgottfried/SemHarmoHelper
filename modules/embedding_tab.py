@@ -25,7 +25,7 @@ def show_explore_embedding_tab():
         topics, probs = topic_model.fit_transform(sentence, np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
         #hierarchical_topics = topic_model.hierarchical_topics(sentence)
 
-        st.data_editor(topic_model.get_topic_info()[["Topic"]], use_container_width=True, hide_index=True)
+        st.data_editor(topic_model.get_topic_info()[["Topic","Representation"]], use_container_width=True, hide_index=True)
 
         # Dimensionalitätsreduktion und Clustering
         reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
