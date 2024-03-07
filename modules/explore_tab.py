@@ -112,6 +112,78 @@ def get_graph_html(df_in, threshold_in):
     return html_string
 
 
+
+def render_dependency_wheel_view_questions(data_in):
+    """
+    Renders a dependency wheel view in Streamlit using Highcharts.
+
+    This function processes a given DataFrame to visualize the count of connections
+    (rows) between pairs of questions based on their occurrence in the data.
+    Each connection's count reflects the number of times a specific pair of
+    questions appears together in the DataFrame.
+
+    Parameters:
+    - data_in: A DataFrame containing the columns "Question 1", "Question 2",
+               and "Similarity score", used to determine the connections.
+
+    The visualization is a dependency wheel that illustrates the interconnectedness
+    between different questions, highlighting the frequency of their relationships.
+    """
+
+    # Initialize a dictionary to count the connections
+    connections = {}
+
+    # Iterate over each row in the DataFrame to process question connections
+    for _, row in data_in.iterrows():
+        # Extract questions from each row
+        source = row['Question 1']
+        target = row['Question 2']
+        similarity_score = row['Similarity score']
+
+        # Key for unique question pairs, ensuring symmetry (i.e., A to B is the same as B to A)
+        key = tuple(sorted([source, target]))
+
+        # Increment count or initialize it for this pair
+        if key in connections:
+            connections[key] += similarity_score  # Summing or averaging might be more meaningful for scores
+        else:
+            connections[key] = similarity_score
+
+    # Convert the connections into the required format for the dependency wheel
+    new_data = [[source, target, score] for (source, target), score in connections.items()]
+
+    # Chart definition tailored for questions and their similarity scores
+    chartDef = {
+        'accessibility': {
+            'point': {
+                'valueDescriptionFormat': '{index}. From {point.from} to {point.to}: {point.weight}.'
+            }
+        },
+        'series': [{
+            'keys': ['from', 'to', 'weight'],
+            'data': new_data,
+            'type': 'dependencywheel',
+            'name': 'Question Relationship based on Similarity Score',
+            'size': '95%',
+            'dataLabels': {
+                'color': '#333',
+                'distance': 10,
+                'style': {'textOutline': 'none'},
+                'textPath': {
+                    'enabled': True,
+                    'attributes': {'dy': 5},
+                }
+            }
+        }],
+        'title': {
+            'text': 'Overview of Question Similarities'
+        }
+    }
+
+    # Render the chart in Streamlit using Highcharts
+    hg.streamlit_highcharts(chartDef, height=700)
+
+
 def render_dependency_wheel_view(data_in):
     """
     Renders a dependency wheel view in Streamlit using Highcharts.
@@ -308,7 +380,8 @@ def render_graph_view(df_sim):
                 components.html(graph_html, height=600)
 
 
-def render_match_view():
+def \
+        render_match_view():
     """
     Render a match view to display questionnaire matches based on similarity scores.
     This view iterates through each questionnaire, determining the number of questions
@@ -437,7 +510,6 @@ def show_explore_tab():
                 )
 
         with sim_container.expander("Explore"):
-
             render_dependency_wheel_view(st.session_state.df_filtered)
 
             render_match_view()

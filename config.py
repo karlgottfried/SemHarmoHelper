@@ -45,3 +45,5 @@ SAMPLE_FILE_PATH = "path/to/your/sample_file.csv"  # Update this path
 
 DISPLAY_RADIO_TEXT_2 = "All LOINC-Codes"
 DISPLAY_RADIO_TEXT_1 = "Pre-selection LOINC-Codes"
+TOOLNAME = "Semantic Search Helper"
+
