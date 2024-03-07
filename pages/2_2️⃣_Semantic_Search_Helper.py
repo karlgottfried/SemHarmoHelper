@@ -87,6 +87,24 @@ with embedding_tab:
     show_embedding_tab()
 
 with pair_tab:
+    step_3_markdown = f"""
+    ### Step 3: Build Similarity Pairs
+
+    After generating embeddings in Step 2, you're ready to explore the core of semantic analysis: finding meaningful connections within your data.
+
+    In this step, our tool calculates the semantic similarity between all pairs of sentences or items in the selected column (`{st.session_state.selected_item_column}`) of your dataset. Follow these steps:
+
+    1. **Calculate Similarity**: Click the "Calculate Similarity for all pairs of column {st.session_state.selected_item_column}" button. Our algorithms will process the embeddings to identify semantically similar items.
+    2. **Explore the Results**: After the calculation, you'll see a list or matrix of item pairs and their similarity scores, indicating how closely two pieces of text are related in context and meaning.
+   
+    This crucial step aids in understanding your text data's landscape and informs decisions about harmonizing items across multiple questionnaires or datasets.
+
+    Remember, the accuracy of similarity scores heavily relies on the quality of your embeddings. Choose the most appropriate model for your data and language in Step 2 for optimal results.
+
+    Proceed to Step 4 to select and explore the pairs that best serve your analysis or harmonization efforts.
+    """
+    st.markdown(step_3_markdown)
+
     show_similarity_pair_tab()
 
 with explore_tab:
