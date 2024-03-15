@@ -83,7 +83,7 @@ def show_preview_table(data, msg, key):
     if st.button('Use Metadata'):
         # Update session state with selected metadata and columns
         st.session_state.update({
-            'metadata': data,
+            # 'metadata': data,
             'selected_item_column': selected_item_column,
             'selected_questionnaire_column': selected_questionnaire_column,
             'step1_completed': True,
@@ -92,7 +92,7 @@ def show_preview_table(data, msg, key):
             "question_counts_df": data.groupby(selected_questionnaire_column)
             [selected_item_column].nunique().reset_index(name=NUMBER_OF_QUESTIONS)
         })
-        st.rerun()
+        # st.rerun()
 
 
 def get_data():
@@ -106,12 +106,6 @@ def get_data():
     file_types = ["csv", "xlsx", "xls"]
     # File uploader widget
     data_upload = st.file_uploader("Upload a metadata file", type=file_types)
-
-    # Load sample file button
-    if st.button('Load Sample File'):
-        # Load and return the sample data
-        df_data = pd.read_excel(SAMPLE_FILE_CSV)  # Update path to your sample file
-        return df_data
 
     # Process uploaded file
     if data_upload:
@@ -169,13 +163,13 @@ def load_questionnaires(url_in, flag):
         return None
 
 
-def set_credentials():
-    """
-    Set credentials for basic authentication in the sidebar.
-    """
-    # Input fields for username and password in the sidebar
-    st.session_state['username'] = st.sidebar.text_input("Username")
-    st.session_state['password'] = st.sidebar.text_input("Password", type="password")
+# def set_credentials():
+#     """
+#     Set credentials for basic authentication in the sidebar.
+#     """
+#     # Input fields for username and password in the sidebar
+#     st.session_state['username'] = st.sidebar.text_input("Username")
+#     st.session_state['password'] = st.sidebar.text_input("Password", type="password")
 
 
 def fetch_all_resources(url_in):
@@ -260,56 +254,63 @@ def extract_loinc_data(title, copyright_in, json_data):
     return pd.DataFrame(rows)
 
 
-def render_loinc_search():
-    """
-    Render the LOINC questionnaire search interface.
-    """
-    st.subheader('LOINC Questionnaire Search')
-    set_credentials()
+def set_credentials():
+    """Set credentials for basic authentication in the sidebar."""
+    username = st.sidebar.text_input("Username", key="username")
+    password = st.sidebar.text_input("Password", type="password", key="password")
+    return username, password
 
-    base_url = LOINC_BASE_URL
-    resource_type = "Questionnaire"
-    initial_url = f"{base_url}/{resource_type}"
-
-    radio_loinc = st.radio("Displayed values:", [DISPLAY_RADIO_TEXT_1, DISPLAY_RADIO_TEXT_2], horizontal=True)
+def fetch_loinc_codes(display_type):
+    """Fetch LOINC codes based on the display type selected by the user."""
     codes = {
         "Patient health questionnaire 4 item": "69724-3",
         "Kansas City cardiomyopathy questionnaire": "71941-9",
         "Generalized anxiety disorder 7 item": "69737-5",
         "Test": "69723-5"
     }
-    ids = []
+    if display_type == DISPLAY_RADIO_TEXT_2:
+        # Assuming fetch_all_resources() efficiently fetches and caches resources if possible
+        return fetch_all_resources(LOINC_BASE_URL + "/Questionnaire")
+    return codes
 
-    if radio_loinc == DISPLAY_RADIO_TEXT_2:
-        all_resources = fetch_all_resources(initial_url)
-        st.write(f"Total resources fetched: {len(all_resources)}")
-        selected_names = st.multiselect("LOINC Codes", all_resources)
-        ids = [all_resources[a] for a in selected_names]
 
-    if radio_loinc == DISPLAY_RADIO_TEXT_1:
-        selected_names = st.multiselect("LOINC Codes", codes.keys())
-        ids = [codes[a] for a in selected_names]
+def user_selected_codes(codes):
+    """Allow user to select LOINC codes and return the selected IDs."""
+    selected_names = st.multiselect("LOINC Codes", list(codes.keys()))
+    return [codes[name] for name in selected_names if name in codes]
 
-    urls = [f"https://fhir.loinc.org/Questionnaire/{id_x}" for id_x in ids]
+
+def load_and_display_questionnaires(ids):
+    """Load and display selected questionnaires."""
     dfs = []
+    for id_x in ids:
+        url = f"https://fhir.loinc.org/Questionnaire/{id_x}"
+        data = load_questionnaires(url, False)
+        if data:
+            df = extract_loinc_data(data["title"], data["copyright"], data["item"])
+            st.expander(data["title"]).write(df)
+            dfs.append(df)
+    return pd.concat(dfs, ignore_index=True) if dfs else None
+
+
+def render_loinc_search():
+    """Render the LOINC questionnaire search interface."""
+    st.subheader('LOINC Questionnaire Search')
+    username, password = set_credentials()
+
+    if not username or not password:
+        st.warning("Please enter username and password.")
+        return
+
+    radio_loinc = st.radio("Displayed values:", [DISPLAY_RADIO_TEXT_1, DISPLAY_RADIO_TEXT_2], horizontal=True)
+    codes = fetch_loinc_codes(radio_loinc)
+    selected_ids = user_selected_codes(codes)
 
     if st.button("Load questionnaires"):
-        for url in urls:
-            data_loc = load_questionnaires(url, False)
-            df_loc = extract_loinc_data(data_loc["title"], data_loc["copyright"], data_loc["item"])
-
-            with st.expander(data_loc["title"]):
-                st.write(df_loc)
-                st.info(data_loc["copyright"])
-
-            dfs.append(df_loc)
-
-        if dfs:
-            combined_df = pd.concat(dfs, ignore_index=True)
+        combined_df = load_and_display_questionnaires(selected_ids)
+        if combined_df is not None:
             st.session_state.loincdf = combined_df
-            if len(combined_df) > 0:
-                st.info(
-                    f"Saved LOINC Selection for Semantic Search: {len(ids)} Instruments with {len(st.session_state.loincdf)} questions included")
+            st.success(f"Loaded {len(combined_df)} questions from {len(selected_ids)} instruments.")
 
 
 def read_file(file, encoding='utf-8'):
@@ -335,7 +336,7 @@ def read_file(file, encoding='utf-8'):
 
 def load_data():
     """
-    Load data from user upload or a sample file.
+    Load data from user upload.
 
     Returns:
     A DataFrame containing the loaded data, or None if no data is loaded.
@@ -351,9 +352,6 @@ def load_data():
         encoding = chardet.detect(raw_data)['encoding']  # Detect encoding
         return read_file(BytesIO(raw_data), encoding=encoding)  # Read file with detected encoding
 
-    # Load sample data button
-    if st.button('Load Sample Data'):
-        return pd.read_csv(SAMPLE_FILE_PATH)  # Load sample data from a predefined path
     return None
 
 
@@ -379,40 +377,71 @@ def fetch_and_display_loinc():
         st.error("Failed to fetch LOINC questionnaires.")  # Display error if fetch fails
 
 
-def show_load_data_tab():
+def choose_data_source():
     """
-    Display options for uploading metadata from various sources and show a preview table.
-
-    Allows the user to choose between uploading metadata from LOINC or uploading a new metadata file.
-    After the data is loaded, it displays a preview table with the loaded data.
+    Allows the user to choose the data upload source.
     """
-    # Initialize loaded_file variable at the beginning of the function
-    loaded_file = None
+    return st.radio("Upload Metadata from:", [OPTION_1, OPTION_2, OPTION_3], horizontal=True)
 
-    # Radio buttons for the user to choose the data upload source
-    input_in = st.radio("Upload Metadata from:", ["LOINC Metadata Upload", "New Metadata Upload"], horizontal=True)
 
-    # Divider for layout
-    st.divider()
+def handle_loinc_data_upload():
+    """
+    Handles the LOINC metadata upload if the data is available in the session state.
+    """
+    if st.session_state.get("loincdf") is not None:
+        render_loinc_search()  # Render LOINC search UI
+        return st.session_state["loincdf"]
+    return None
 
-    # LOINC Metadata Upload option
-    if input_in == "LOINC Metadata Upload" and st.session_state.get("loincdf") is not None:
-        render_loinc_search()  # Call function to render LOINC search UI
-        loaded_file = st.session_state["loincdf"]  # Use LOINC data if available
 
-    # New Metadata Upload option
-    elif input_in == "New Metadata Upload":
-        loaded_file = get_data()  # Call function to get data from file upload
+def handle_new_data_upload():
+    """
+    Handles the new metadata file upload.
+    """
+    return get_data()  # Get data from file upload
 
-    # Update session state with the loaded metadata
-    st.session_state.update({'metadata': loaded_file})
 
-    # Display preview table if metadata is loaded
-    if st.session_state.metadata is not None:
-        show_preview_table(st.session_state["metadata"], msg="Metadata Preview:", key=f"{input_in}_grid")
+def handle_sample_data_upload():
+    """
+    Handles the sample file upload.
+    """
+    return pd.read_excel(SAMPLE_FILE_CSV)
 
-    # Check if diagram data is ready and display the bar chart if true
-    if st.session_state.get('diagram_data_ready', False) and st.session_state["question_counts_df"] is not None:
+
+def display_metadata_preview(loaded_file):
+    """
+    Displays a preview of the loaded metadata.
+    """
+    if loaded_file is not None:
+        show_preview_table(loaded_file, msg="Metadata Preview:", key="metadata_grid")
+
+
+def display_metadata_overview():
+    """
+    Displays the metadata overview if the diagram data is ready.
+    """
+    if st.session_state.get('diagram_data_ready', False) and st.session_state.get("question_counts_df") is not None:
         display_load_barchart(
             st.session_state["question_counts_df"].sort_values(by=NUMBER_OF_QUESTIONS, ascending=False),
             st.session_state.selected_questionnaire_column, NUMBER_OF_QUESTIONS, "Metadata Overview")
+
+
+def show_load_data_tab():
+    """
+    Refactored function to display options for uploading metadata from various sources and show a preview table.
+    """
+
+    data_source = choose_data_source()
+    st.divider()
+
+    if data_source == OPTION_1:
+        loaded_file = handle_loinc_data_upload()
+    elif data_source == OPTION_2:  # New Metadata Upload
+        loaded_file = handle_new_data_upload()
+    else:
+        loaded_file = handle_sample_data_upload()
+
+    st.session_state.metadata = loaded_file  # Update session state with the loaded metadata
+    display_metadata_preview(loaded_file)
+    display_metadata_overview()
+
