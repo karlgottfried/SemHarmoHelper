@@ -1,3 +1,5 @@
+import streamlit
+
 from modules.load_data_tab import show_load_data_tab
 from modules.embedding_tab import show_embedding_tab
 from modules.similarity_pair_tab import show_similarity_pair_tab
@@ -107,7 +109,8 @@ with load_tab:
     - Remember, the quality of the input data directly impacts the effectiveness of the semantic search. Ensure your metadata is accurate and representative of your dataset.
     """
 
-    st.markdown(step_1_markdown)
+    with st.expander("Instructions and Tips"):
+        st.markdown(step_1_markdown)
 
     show_load_data_tab()
 
@@ -129,8 +132,8 @@ with embedding_tab:
 
     Now, let's begin building embeddings to uncover the hidden insights in your text data!
     """
-
-    st.markdown(step_2_markdown)
+    with st.expander("Instructions and Tips"):
+        st.markdown(step_2_markdown)
 
     show_embedding_tab()
 
@@ -151,7 +154,8 @@ with pair_tab:
 
     Proceed to Step 4 to select and explore the pairs that best serve your analysis or harmonization efforts.
     """
-    st.markdown(step_3_markdown)
+    with st.expander("Instructions and Tips"):
+        st.markdown(step_3_markdown)
 
     show_similarity_pair_tab()
 
@@ -177,7 +181,7 @@ with explore_tab:
 
     Now, engage with the final step to solidify your semantic search findings and capitalize on the semantic associations within your data. Step 4 is where all your previous work comes together, providing you with a clear path forward.
     """
-
-    st.markdown(step_4_markdown)
+    with st.expander("Instructions and Tips"):
+        st.markdown(step_4_markdown)
 
     show_explore_tab()
