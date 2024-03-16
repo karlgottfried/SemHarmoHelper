@@ -163,68 +163,16 @@ def load_questionnaires(url_in, flag):
         return None
 
 
-# def set_credentials():
-#     """
-#     Set credentials for basic authentication in the sidebar.
-#     """
-#     # Input fields for username and password in the sidebar
-#     st.session_state['username'] = st.sidebar.text_input("Username")
-#     st.session_state['password'] = st.sidebar.text_input("Password", type="password")
-
-
 def fetch_all_resources(url_in):
     """
     Fetch all resources from the initial URL until no more 'next' links are found.
-
-    Parameters:
-    - url_in: The initial URL to start fetching from.
-
-    Returns:
-    A dictionary containing all fetched resources.
     """
-
     resources = {}
-    load_count = 0
-
-    while url_in and load_count < 1:
-        print("url", url_in)
-        bundle = load_questionnaires(url_in, True)
-        if bundle and 'entry' in bundle:
-            result = extract_quest(bundle['entry'])
-            resources.update(result)
-
-        # Find the 'next' link to continue fetching
-        url_in = None
-        if bundle:
-            for link in bundle.get('link', []):
-                if link['relation'] == 'next':
-                    url_in = link['url']
-                    break
-
-        load_count += 1
-
+    bundle = load_questionnaires(url_in, True)
+    if bundle and 'entry' in bundle:
+        resources.update({entry['resource'].get('title'): entry['resource'].get('id')
+                          for entry in bundle['entry'] if 'resource' in entry})
     return resources
-
-
-def extract_quest(json_data):
-    """
-    Extract questionnaire IDs and titles from the JSON data.
-
-    Parameters:
-    - json_data: The JSON data containing questionnaires.
-
-    Returns:
-    A dictionary with titles as keys and IDs as values.
-    """
-    results = {}
-    for item in json_data:
-        resource = item.get('resource', {})
-        title = resource.get('title')
-        id_in = resource.get('id')
-
-        if title and id_in:
-            results[title] = id_in
-    return results
 
 
 def extract_loinc_data(title, copyright_in, json_data):
@@ -254,11 +202,21 @@ def extract_loinc_data(title, copyright_in, json_data):
     return pd.DataFrame(rows)
 
 
+def reset_app_state():
+    """
+    Resets the app state by clearing all session state variables.
+    This method clears the variables without directly reloading the page.
+    For a full reset, consider using st.experimental_rerun() after this function.
+    """
+    st.session_state.clear()
+
+
 def set_credentials():
     """Set credentials for basic authentication in the sidebar."""
     username = st.sidebar.text_input("Username", key="username")
     password = st.sidebar.text_input("Password", type="password", key="password")
     return username, password
+
 
 def fetch_loinc_codes(display_type):
     """Fetch LOINC codes based on the display type selected by the user."""
@@ -269,7 +227,6 @@ def fetch_loinc_codes(display_type):
         "Test": "69723-5"
     }
     if display_type == DISPLAY_RADIO_TEXT_2:
-        # Assuming fetch_all_resources() efficiently fetches and caches resources if possible
         return fetch_all_resources(LOINC_BASE_URL + "/Questionnaire")
     return codes
 
@@ -280,7 +237,7 @@ def user_selected_codes(codes):
     return [codes[name] for name in selected_names if name in codes]
 
 
-def load_and_display_questionnaires(ids):
+def load_and_display_questionnaires_expander(ids):
     """Load and display selected questionnaires."""
     dfs = []
     for id_x in ids:
@@ -307,7 +264,7 @@ def render_loinc_search():
     selected_ids = user_selected_codes(codes)
 
     if st.button("Load questionnaires"):
-        combined_df = load_and_display_questionnaires(selected_ids)
+        combined_df = load_and_display_questionnaires_expander(selected_ids)
         if combined_df is not None:
             st.session_state.loincdf = combined_df
             st.success(f"Loaded {len(combined_df)} questions from {len(selected_ids)} instruments.")
@@ -353,28 +310,6 @@ def load_data():
         return read_file(BytesIO(raw_data), encoding=encoding)  # Read file with detected encoding
 
     return None
-
-
-def fetch_and_display_loinc():
-    """
-    Fetch and display LOINC questionnaires using basic authentication.
-    """
-    # Authentication fields in the sidebar
-    username = st.sidebar.text_input("Username")
-    password = st.sidebar.password_input("Password", type="password")
-
-    # Check if credentials are provided
-    if not username or not password:
-        st.sidebar.warning("Please enter username and password to fetch LOINC data.")
-        return
-
-    # Fetching data
-    response = requests.get(LOINC_BASE_URL, auth=HTTPBasicAuth(username, password))
-    if response.status_code == 200:
-        questionnaires = response.json()  # Parse JSON response
-        st.write(questionnaires)  # Placeholder for displaying questionnaires
-    else:
-        st.error("Failed to fetch LOINC questionnaires.")  # Display error if fetch fails
 
 
 def choose_data_source():
@@ -428,20 +363,31 @@ def display_metadata_overview():
 
 def show_load_data_tab():
     """
-    Refactored function to display options for uploading metadata from various sources and show a preview table.
+    Displays options for uploading metadata from various sources and shows a preview table.
+    Includes a button to reset the app state and reload the page for a fresh start.
     """
+    # Adding a divider for visual separation
 
-    data_source = choose_data_source()
     st.divider()
 
+    # Choosing the data source based on user selection
+    data_source = choose_data_source()
+
+    # Adding another divider after the data source selection
+    st.divider()
+
+    # Determining the loaded file based on the selected data source
     if data_source == OPTION_1:
         loaded_file = handle_loinc_data_upload()
     elif data_source == OPTION_2:  # New Metadata Upload
         loaded_file = handle_new_data_upload()
-    else:
+    elif data_source == OPTION_3:  # Use Sample Data
         loaded_file = handle_sample_data_upload()
+    else:
+        loaded_file = None
 
-    st.session_state.metadata = loaded_file  # Update session state with the loaded metadata
-    display_metadata_preview(loaded_file)
-    display_metadata_overview()
-
+    # If a file has been loaded, update the session state and display the metadata
+    if loaded_file is not None:
+        st.session_state.metadata = loaded_file
+        display_metadata_preview(loaded_file)
+        display_metadata_overview()
