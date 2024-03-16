@@ -34,10 +34,10 @@ def show_explore_sim_tab():
     if 'similarity' not in st.session_state or st.session_state.similarity is None:
         st.info('No similarity data available. Please calculate similarity first.')
         return
-    pd.set_option("styler.render.max_elements", 1231980)
-    st.dataframe(st.session_state.similarity.style.format({SIMILARITY_SCORE: "{:.2f}"}), use_container_width=True)
+    # pd.set_option("styler.render.max_elements", 1231980)
+    st.data_editor(st.session_state.similarity.style.format({SIMILARITY_SCORE: "{:.2f}"}), use_container_width=True)
     mean_ada = st.session_state.similarity[SIMILARITY_SCORE].mean()
-
+    st.info(f"Calculated {len(st.session_state.similarity)} Pairs with Similarity Scores from {st.session_state.similarity[SIMILARITY_SCORE].min()}")
     # Histogram of similarity scores
     fig = go.Figure(
         data=go.Histogram(x=st.session_state.similarity[SIMILARITY_SCORE], nbinsx=int((st.session_state.similarity[SIMILARITY_SCORE].max() - st.session_state.similarity[

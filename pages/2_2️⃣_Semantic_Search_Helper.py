@@ -20,6 +20,9 @@ def initialize_sidebar():
         if st.button('Restart Metadata Upload', use_container_width=True):
             reset_app_state()
             st.rerun()
+        st.write("""Clicking **"Restart Metadata Upload"** clears all data and resets the application, allowing you to start afresh with new uploads or analyses.
+                          Use this button to easily correct mistakes, explore different data sets, or restart your analysis from scratch.
+                          """, unsafe_allow_html=True)
 
 
 def initialize_session_state():
