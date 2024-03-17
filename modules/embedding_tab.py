@@ -15,69 +15,43 @@ import numpy as np
 # import   # HDBSCAN for clustering (commented out)
 # initialize_session_state()  # Initialize Streamlit session state (commented out)
 
-def show_explore_embedding_tab():
-    with st.expander("Explore Embedding Building Step", expanded=True):
-        # Annehmen, dass EMBEDDING und SELECTED_ITEM_COLUMN bereits definiert sind
-        sentence = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]].tolist()
 
-        # Trainieren von BERTopic
+
+
+def show_explore_embedding_tab():
+    # Expander UI component for exploring embeddings
+    with st.expander("Explore Embedding Building Step", expanded=True):
+        # Assumes EMBEDDING and SELECTED_ITEM_COLUMN are predefined in the Streamlit session state
+        sentences = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]].tolist()
+
+        # Topic modeling with BERTopic
         topic_model = BERTopic(min_topic_size=10)
-        topics, probs = topic_model.fit_transform(sentence, np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
+        topics, probs = topic_model.fit_transform(sentences, np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
         #hierarchical_topics = topic_model.hierarchical_topics(sentence)
 
-        st.data_editor(topic_model.get_topic_info()[["Topic","Representation"]], use_container_width=True, hide_index=True)
+        # Display topic information in a data editor widget
+        st.data_editor(topic_model.get_topic_info()[["Topic", "Representation"]], use_container_width=True, hide_index=True)
 
         # Dimensionalitätsreduktion und Clustering
         reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
         clusterer = hdbscan.HDBSCAN(min_cluster_size=15, gen_min_span_tree=True)
-        clusterer.fit(reduced_embeddings)
+        cluster_labels = clusterer.fit_predict(reduced_embeddings)
 
-        # Displaying the filtered table
-
-        # Vorbereitung der Daten für die Visualisierung
+        # Preparing data for visualization
         df_reduced = pd.DataFrame(reduced_embeddings, columns=['UMAP 1', 'UMAP 2', "UMAP 3"])
-        df_reduced['Sentence'] = sentence  # Fügen Sie Sätze als Spalte hinzu
-        df_reduced['Topic'] = [f"Topic {topic}" for topic in topics]  # Fügen Sie Themen als Spalte hinzu
+        df_reduced['Sentence'] = sentences  # Adding sentences as a column
+        df_reduced['Topic'] = [f"Topic {topic}" for topic in topics]  # Adding topics as a column
 
-        #st.write(topic_model.get_topic_info().columns())
+        st.data_editor(df_reduced[["Sentence","Topic"]], use_container_width=True, hide_index=True)
 
-
-        # Visualisierung der reduzierten Einbettungen mit Plotly
+        # Visualize reduced embeddings with Plotly in a 3D scatter plot
         fig_3d = px.scatter_3d(
             df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3",
-            color='Topic', hover_data=["Sentence","Topic"],  # Fügen Sie hier die Sätze und Themen zum Hover hinzu
+            color='Topic', hover_data=["Sentence", "Topic"],  # Add sentences and topics to hover data
             color_continuous_scale=px.colors.qualitative.Bold,
-            labels={"color": "Topic"}  # Benennen Sie die Farblegende um
-        )
-        fig_3d.update_traces(hovertemplate='Sentence: %{customdata[0]}<br>Topic: %{customdata[1]}')
-        st.plotly_chart(fig_3d, use_container_width=True)
+            labels={"color": "Topic"}  # Rename color legend for clarity
+        ).update_traces(hovertemplate='Sentence: %{customdata[0]}<br>Topic: %{customdata[1]}')
 
-
-
-
-def show_explore_embedding_tab_2():
-    with st.expander("Explore Embedding Building Step", expanded=True):
-        st.data_editor(st.session_state[EMBEDDING][[st.session_state[SELECTED_ITEM_COLUMN], EMBEDDING]], use_container_width=True, hide_index=True)
-        st.divider()
-        st.markdown("Dimensionality Reduction to 3D with [UMAP](https://arxiv.org/abs/1802.03426)")
-
-        umap_model = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine')
-        reduced_embeddings = umap_model.fit_transform(list(st.session_state[EMBEDDING][EMBEDDING]))
-
-        df_reduced = pd.DataFrame(reduced_embeddings, columns=['UMAP 1', 'UMAP 2', "UMAP 3"])
-        df_reduced['Sentence'] = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]]
-
-        # Clustering mit HDBSCAN
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=15, gen_min_span_tree=True)
-        clusterer.fit(reduced_embeddings)
-        df_reduced['cluster'] = clusterer.labels_
-
-        # Visualisierung der Cluster
-        fig_3d = px.scatter_3d(
-            df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3",
-            color="cluster", hover_data={'UMAP 1': False, 'UMAP 2': False, 'UMAP 3': False, 'Sentence': True},
-            color_continuous_scale=px.colors.qualitative.Bold
-        )
         st.plotly_chart(fig_3d, use_container_width=True)
 
 
@@ -94,17 +68,18 @@ def get_embedding(text, model):
     """
     text = text.replace("\n", " ")  # Normalize text by replacing newlines
     # Retrieve embedding from OpenAI API
-    return OpenAI.api_key.embeddings.create(input=[text], model=model).data[0]['embedding']
+    OpenAI().api_key = st.text_input(placeholder="Openai key")
+    return OpenAI().api_key.embeddings.create(input=[text], model=model).data[0]['embedding']
 
 
 def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
     # Display spinner during embeddings calculation
-    with st.spinner(f"calculate embeddings for column {st.session_state[SELECTED_ITEM_COLUMN]}"):
+    with st.spinner(f"Calculating embeddings for column {st.session_state[SELECTED_ITEM_COLUMN]}"):
         # If Sentence Transformer model is selected
         if model_selected == MODEL_SBERT:
             model_in = SentenceTransformer(model_name)  # Load model
             # Calculate embeddings and normalize them
-            output = model_in.encode(sentences=sentences_in.tolist(), show_progress_bar=True, normalize_embeddings=True)
+            output = model_in.encode(sentences=sentences_in, show_progress_bar=True, normalize_embeddings=True)
             data_in[EMBEDDING] = list(output)  # Store embeddings in DataFrame
             st.session_state["step2_completed"] = True
 
@@ -117,68 +92,61 @@ def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
 
 
 def show_embedding_tab():
-    # Check if metadata is selected, prompt user otherwise
-    if st.session_state.metadata is None:
+    # Check if metadata is selected, otherwise prompt the user
+    if st.session_state.get('metadata') is None:
         st.info('You have to select data for viewing and editing. Switch to Step 1 tab first.')
-    else:
-        # Container for embeddings section
-        embedding_container = st.container()
-        # Radio buttons for model selection
-        model_options = embedding_container.radio("Data Usage", options=[MODEL_ADA, MODEL_SBERT], horizontal=True)
-        st.session_state["model_used"] = model_options  # Store selected model
+        return  # Exit the function early if no metadata is selected
 
-        # If ADA model is selected
-        if model_options == MODEL_ADA:
-            # Dropdown for selecting ADA model version
-            model = embedding_container.selectbox("Select a model to process",
-                                                  ["text-embedding-ada-002", "text-embedding-3-small"])
-            # Input for OpenAI API key
-            openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+    embedding_container = st.container()
 
-            if openai_api_key:  # If API key is provided
-                client = OpenAI(api_key=openai_api_key)  # Initialize OpenAI client
-                df = st.session_state.metadata  # Load metadata
-                sentences = df[st.session_state.selected_item_column].tolist()  # Extract sentences
+    # Model selection
+    model_options = embedding_container.radio("Data Usage", options=[MODEL_ADA, MODEL_SBERT], horizontal=True)
+    st.session_state['model_used'] = model_options
 
-                # Button to trigger embeddings calculation
-                if embedding_container.button(f"Calculate {model_options} embeddings", type='primary',
-                                              key=f"{model_options}_button"):
-                    start_time_em = time.time()  # Start timing
-                    # Calculate embeddings and update session state
-                    df_embedding = calculate_embeddings(df, model, df[st.session_state.selected_item_column],
-                                                        model_options)
-                    st.session_state[EMBEDDING] = df_embedding
+    model = None
+    if model_options == MODEL_ADA:
+        model = embedding_container.selectbox("Select a model to process",
+                                              ["text-embedding-ada-002", "text-embedding-3-small"])
+        openai_api_key = st.text_input("OpenAI API Key", key="openai_api_key", type="password")
+    elif model_options == MODEL_SBERT:
+        model = embedding_container.selectbox("Select a model to process",
+                                              ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
 
-                    if df_embedding is not None:  # If embeddings are calculated
-                        # Display editable table of embeddings
-                        st.data_editor(df_embedding[[st.session_state.selected_item_column, EMBEDDING]],
-                                       use_container_width=True)
-                        end_time_em = time.time()  # End timing
-                        # Calculate and store duration
-                        st.session_state.duration_em = end_time_em - start_time_em
-                        st.session_state.duration_minutes_em = st.session_state.duration_em / 60
-                        st.session_state['step2_completed'] = True  # Mark step as completed
+    if not model:
+        st.warning("Please select a model to proceed.")
+        return
 
-        # If Sentence Transformer model is selected
-        if model_options == MODEL_SBERT:
-            # Dropdown for selecting Sentence Transformer model
-            model = embedding_container.selectbox("Select a model to process",
-                                                  ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
-            selected_item_column = st.session_state.selected_item_column  # Column with text
-            df = st.session_state.metadata  # Load metadata
-#            sentences = df[selected_item_column].tolist()  # Extract sentences
+    # Trigger embeddings calculation
+    if embedding_container.button(f"Calculate {model_options} embeddings", type='primary'):
+        with st.spinner(f"Calculating embeddings using {model}..."):
+            calculate_and_display_embeddings(model_options, model,
+                                             openai_api_key if model_options == MODEL_ADA else None)
 
-            # Button to trigger embeddings calculation
-            if embedding_container.button(f"Calculate {model_options} embeddings", type='primary',
-                                          key=f"{model_options}_button"):
-                start_time_em = time.time()  # Start timing
-                # Calculate embeddings and update session state
-                df_embedding = calculate_embeddings(df, model, df[selected_item_column], model_options)
-                st.session_state[EMBEDDING] = df_embedding
-                end_time_em = time.time()  # End timing
-                # Calculate and store duration
-                duration_em = end_time_em - start_time_em
-                duration_minutes_em = duration_em / 60
-                st.session_state['step2_completed'] = True  # Mark step as completed
 
-                show_explore_embedding_tab()  # Show the embedding exploration tab
+def calculate_and_display_embeddings(model_options, model, api_key=None):
+    start_time = time.time()
+    df = st.session_state['metadata']
+    sentences = df[st.session_state[SELECTED_ITEM_COLUMN]].tolist()
+
+    # Calculate embeddings based on the selected model
+    if model_options == MODEL_ADA and api_key:
+        df = calculate_embeddings(df, model, sentences, model_options, api_key)
+    elif model_options == MODEL_SBERT:
+        df = calculate_embeddings(df, model, sentences, model_options)
+
+    if df is not None:
+        st.session_state[EMBEDDING] = df  # Update session state with embeddings
+        display_embeddings_table(df)
+        mark_step_completed(start_time)
+        show_explore_embedding_tab()
+
+
+def display_embeddings_table(df):
+    st.data_editor(df[[st.session_state['selected_item_column'], EMBEDDING]], use_container_width=True)
+
+
+def mark_step_completed(start_time):
+    end_time = time.time()
+    duration = (end_time - start_time) / 60  # Convert to minutes
+    st.session_state['step2_completed'] = True
+    st.success(f"Embeddings calculated successfully in {duration:.2f} minutes.")

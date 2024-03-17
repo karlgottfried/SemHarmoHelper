@@ -6,9 +6,7 @@ import streamlit_highcharts as hg
 import streamlit.components.v1 as components
 import plotly.graph_objs as go
 from streamlit_extras.dataframe_explorer import dataframe_explorer
-# import networkx as nx
-# from st_aggrid import AgGrid, ColumnsAutoSizeMode
-# from streamlit_echarts import st_echarts
+from st_aggrid import AgGrid, ColumnsAutoSizeMode
 
 
 def dataframe_with_selections(df_in):
@@ -110,7 +108,6 @@ def get_graph_html(df_in, threshold_in):
     html_string = got_net.generate_html()
 
     return html_string
-
 
 
 def render_dependency_wheel_view_questions(data_in):
@@ -380,8 +377,7 @@ def render_graph_view(df_sim):
                 components.html(graph_html, height=600)
 
 
-def \
-        render_match_view():
+def render_match_view():
     """
     Render a match view to display questionnaire matches based on similarity scores.
     This view iterates through each questionnaire, determining the number of questions
@@ -466,6 +462,7 @@ def \
 
 
 def show_explore_tab():
+
     if st.session_state.similarity is None:
         st.info('You have to select data and build embeddings for viewing similarity')
     else:
