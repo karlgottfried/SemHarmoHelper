@@ -44,35 +44,59 @@ def show_explore_sim_tab():
             max_value=1,
         ),
     }, key=f"data_frame_sim_{st.session_state['model_used']}", hide_index=True)
+    # Calculate statistics: mean, median, and quartiles
     mean_ada = st.session_state.similarity[SIMILARITY_SCORE].mean()
+    median_ada = st.session_state.similarity[SIMILARITY_SCORE].median()
+    quartiles_ada = st.session_state.similarity[SIMILARITY_SCORE].quantile([0.25, 0.75])
+
+    # Display a success message summarizing the statistics
     st.success(f"Calculated {len(st.session_state.similarity)} pairs with similarity scores. "
-            f"Scores range from {st.session_state.similarity[SIMILARITY_SCORE].min():.2f} "
-            f"to {st.session_state.similarity[SIMILARITY_SCORE].max():.2f}.")
+               f"Scores range from {st.session_state.similarity[SIMILARITY_SCORE].min():.2f} "
+               f"to {st.session_state.similarity[SIMILARITY_SCORE].max():.2f}. "
+               f"\nMean: {mean_ada:.2f}, Median: {median_ada:.2f}, "
+               f"1st Quartile: {quartiles_ada[0.25]:.2f}, 3rd Quartile: {quartiles_ada[0.75]:.2f}.")
 
-    # Histogram of similarity scores
-    fig = go.Figure(
-        data=go.Histogram(x=st.session_state.similarity[SIMILARITY_SCORE], nbinsx=int((st.session_state.similarity[SIMILARITY_SCORE].max() - st.session_state.similarity[
-                SIMILARITY_SCORE].min()) / 0.01), opacity=0.7, marker=dict(color='blue')))
-    fig.update_layout(title='Similarity Score Distribution', xaxis=dict(title='Similarity Score'),
-                      yaxis=dict(title='Count'))
-    fig.add_shape(type='line',
-                  x0=mean_ada, y0=0,
-                  x1=mean_ada, y1=1,
-                  xref='x', yref='paper',
-                  line=dict(color='Yellow', width=3)
-                  )
+    # Create a histogram for the similarity scores
+    fig = go.Figure(data=go.Histogram(x=st.session_state.similarity[SIMILARITY_SCORE],
+                                      nbinsx=int((st.session_state.similarity[SIMILARITY_SCORE].max() -
+                                                  st.session_state.similarity[SIMILARITY_SCORE].min()) / 0.01),
+                                      opacity=0.7, marker=dict(color='blue'),
+                                      name="Similarity Scores"))
 
+    # Define a function to add statistical lines with hover information
+    def add_stat_line(fig, x, name, color):
+        fig.add_trace(go.Scatter(x=[x, x], y=[0, 1], mode="lines",
+                                 line=dict(color=color, width=2),
+                                 name=name,
+                                 hoverinfo='skip',  # Use 'skip' if you don't want hover info for lines
+                                 yaxis="y2"))  # Reference to the secondary y-axis
+
+    # Update the layout to include a secondary y-axis for the statistical lines
     fig.update_layout(
-        title_text=f'Cosine Similarity Distribution for {st.session_state["model_used"]} Model',
-        xaxis_title='Cosine Similarity Score',
-        yaxis_title='Frequency',
-        bargap=0.2,
-        width=600,
-        height=400
+        yaxis2=dict(
+            overlaying='y',
+            range=[0, 1],  # The range is set from 0 to 1 to ensure lines cover the full diagram height
+            showticklabels=False  # Hide tick labels for the secondary y-axis
+        )
     )
 
-    fig.update_traces(hoverinfo='x+y', hovertemplate="Score: %{x}<br>Frequency: %{y}")
+    # Add statistical lines using the updated function
+    add_stat_line(fig, mean_ada, 'Mean', 'Yellow')
+    add_stat_line(fig, median_ada, 'Median', 'Red')
+    add_stat_line(fig, quartiles_ada[0.25], '1st Quartile', 'Green')
+    add_stat_line(fig, quartiles_ada[0.75], '3rd Quartile', 'Green')
 
+    # Update the layout to include titles and adjust the bar gap
+    fig.update_layout(title=f'Cosine Similarity Distribution for {st.session_state["model_used"]} Model',
+                      xaxis_title='Cosine Similarity Score',
+                      yaxis_title='Frequency',
+                      bargap=0.2,
+                      width=600,
+                      height=400,
+                      legend_title_text='Legend')
+
+    fig.update_traces(hoverinfo='x+y', hovertemplate="Score: %{x}<br>Frequency: %{y}")
+    # Display the plot in Streamlit
     st.plotly_chart(fig, use_container_width=True)
 
 
