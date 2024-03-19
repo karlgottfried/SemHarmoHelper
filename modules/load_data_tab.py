@@ -308,7 +308,7 @@ def choose_data_source():
     """
     Allows the user to choose the data upload source.
     """
-    return st.radio("Upload Metadata from:", [OPTION_1, OPTION_2, OPTION_3], horizontal=True)
+    return st.radio("Upload Metadata from:", [OPTION_3, OPTION_2, OPTION_1], horizontal=True)
 
 
 def handle_loinc_data_upload():
