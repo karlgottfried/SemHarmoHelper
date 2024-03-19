@@ -6,6 +6,9 @@ from modules.similarity_pair_tab import show_similarity_pair_tab
 from modules.explore_tab import show_explore_tab
 from config import *  # Import the status messages from the config
 
+# 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 💾
+
+
 st.set_page_config(page_title=TOOLNAME, page_icon="2️⃣", layout="wide",
                    initial_sidebar_state="expanded")
 
@@ -16,7 +19,7 @@ def initialize_sidebar():
     """
     with st.sidebar:
         st.write("[Get an OpenAI API key](https://platform.openai.com/account/api-keys)")
-        st.write("[View the source code](https://github.com/yourgithub/SemanticSearchTool/blob/main/app.py)")
+        st.write("[View the source code](https://github.com/karlgottfried/SemHarmoHelper)")
         if st.button('Restart Metadata Upload', use_container_width=True):
             reset_app_state()
             st.rerun()
@@ -26,20 +29,36 @@ def initialize_sidebar():
 
 
 def initialize_session_state():
-    # Initializing session state variables with default values if they don't exist
+    # Initialize session state variables with default values if they don't exist.
+    # This setup ensures that the app can safely access these variables at any point.
     default_values = {
-        'metadata': None, EMBEDDING: None, 'similarity': None,
-        'selected_item_column': None, 'selected_questionnaire_column': None,
-        'selected_data': pd.DataFrame(), 'df_filtered': None, 'username': '', 'password': '',
-        LOINCDF: pd.DataFrame(), 'model_used': None, "duration_minutes_em": None,
-        "load_chat": None, 'diagram_data_ready': False, "question_counts_df": None
+        'metadata': None,  # Placeholder for dataset metadata
+        EMBEDDING: None,  # Placeholder for embeddings data
+        'similarity': None,  # Placeholder for similarity scores
+        'selected_item_column': None,  # Column selected by the user for analysis
+        'selected_questionnaire_column': None,  # Selected questionnaire column for analysis
+        'selected_data': pd.DataFrame(),  # DataFrame to store user-selected data
+        'df_filtered': None,  # Placeholder for filtered DataFrame based on user criteria
+        'username': '',  # Username for login purposes (if applicable)
+        'password': '',  # Password for login purposes (if applicable)
+        LOINCDF: pd.DataFrame(),  # Placeholder for a specific DataFrame (replace LOINCDF with actual key)
+        'model_used': None,  # Tracks the model selected by the user
+        "duration_minutes_em": None,  # Duration of embedding calculation
+        "load_chat": None,  # Placeholder for loading chat data (if applicable)
+        'diagram_data_ready': False,  # Flag to indicate readiness of diagram data
+        "question_counts_df": None,  # Placeholder for DataFrame with question counts
+        # Adding new session_state keys with their default values
+        'topics': None,  # Topics from topic modeling
+        'probs': None,  # Probabilities associated with topics
+        'reduced_embeddings': None,  # UMAP reduced embeddings
+        'cluster_labels': None,  # HDBSCAN cluster labels
+        'df_reduced': pd.DataFrame()  # DataFrame containing reduced embeddings and associated data
     }
 
     for key, value in default_values.items():
         if key not in st.session_state:
             st.session_state[key] = value
-    # Rerun the Streamlit script to update session state
-
+    # No explicit rerun command here; ensure to rerun or refresh your Streamlit app as needed.
 
 def display_status_updates():
     """

@@ -1,9 +1,10 @@
 import streamlit as st
-from config import *
+from config import TOOLNAME
 
 st.set_page_config(
     page_title="Harmonisation Helper",
     page_icon="📒 ",
+    layout="wide"
 )
 
 st.write("# 📒Welcome to Harmonisation Helper!")
@@ -12,7 +13,7 @@ st.markdown(
     f"""
 ### 🎯 Motivation
 
-This tool is designed to facilitate the semantic harmonization of multi-item based questionnaires using embedding-based methods. It allows you to generate semantic embeddings from text data and utilize these embeddings to identify similarity between questionnair items.  
+This tool is designed to facilitate the semantic harmonization of multi-item based questionnaires using embedding-based methods. It allows you to generate semantic embeddings from text data and utilize these embeddings to identify similarity between questionnaire items.  
 The process is divided into a series of steps that will guide you through the harmonization journey.
 
 ### Step 1️⃣: [Data Exploration](Data_Explore) (Under Development)

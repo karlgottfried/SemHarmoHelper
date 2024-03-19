@@ -50,10 +50,10 @@ def show_explore_sim_tab():
     quartiles_ada = st.session_state.similarity[SIMILARITY_SCORE].quantile([0.25, 0.75])
 
     # Display a success message summarizing the statistics
-    st.success(f"Calculated {len(st.session_state.similarity)} pairs with similarity scores. "
+    st.success(f"Calculated {len(st.session_state.similarity)} pairs with similarity scores.  \n"
                f"Scores range from {st.session_state.similarity[SIMILARITY_SCORE].min():.2f} "
-               f"to {st.session_state.similarity[SIMILARITY_SCORE].max():.2f}. "
-               f"\nMean: {mean_ada:.2f}, Median: {median_ada:.2f}, "
+               f"to {st.session_state.similarity[SIMILARITY_SCORE].max():.2f}. \n\n"
+               f"Mean: {mean_ada:.2f}, Median: {median_ada:.2f}, \n"
                f"1st Quartile: {quartiles_ada[0.25]:.2f}, 3rd Quartile: {quartiles_ada[0.75]:.2f}.")
 
     # Create a histogram for the similarity scores
@@ -64,15 +64,16 @@ def show_explore_sim_tab():
                                       name="Similarity Scores"))
 
     # Define a function to add statistical lines with hover information
-    def add_stat_line(fig, x, name, color):
-        fig.add_trace(go.Scatter(x=[x, x], y=[0, 1], mode="lines",
-                                 line=dict(color=color, width=2),
-                                 name=name,
-                                 hoverinfo='skip',  # Use 'skip' if you don't want hover info for lines
-                                 yaxis="y2"))  # Reference to the secondary y-axis
+    def add_stat_line(fig_loc, x, name, color):
+        fig_loc.add_trace(go.Scatter(x=[x, x], y=[0, 1], mode="lines",
+                                     line=dict(color=color, width=2),
+                                     name=name,
+                                     hoverinfo='skip',  # Use 'skip' if you don't want hover info for lines
+                                     yaxis="y2"))  # Reference to the secondary y-axis
 
     # Update the layout to include a secondary y-axis for the statistical lines
     fig.update_layout(
+        margin=dict(l=40, r=40, t=40, b=80),
         yaxis2=dict(
             overlaying='y',
             range=[0, 1],  # The range is set from 0 to 1 to ensure lines cover the full diagram height
@@ -81,13 +82,14 @@ def show_explore_sim_tab():
     )
 
     # Add statistical lines using the updated function
-    add_stat_line(fig, mean_ada, 'Mean', 'Yellow')
+    add_stat_line(fig, mean_ada, 'Mean', 'Orange')
     add_stat_line(fig, median_ada, 'Median', 'Red')
     add_stat_line(fig, quartiles_ada[0.25], '1st Quartile', 'Green')
     add_stat_line(fig, quartiles_ada[0.75], '3rd Quartile', 'Green')
 
     # Update the layout to include titles and adjust the bar gap
     fig.update_layout(title=f'Cosine Similarity Distribution for {st.session_state["model_used"]} Model',
+                      margin=dict(l=40, r=40, t=40, b=80),
                       xaxis_title='Cosine Similarity Score',
                       yaxis_title='Frequency',
                       bargap=0.2,

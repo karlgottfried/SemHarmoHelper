@@ -1,16 +1,4 @@
-# import streamlit as st
-# import pandas as pd
-# import altair as alt
-# import requests
-# import streamlit
-# from requests.auth import HTTPBasicAuth
 from config import *
-# import plotly.graph_objs as go
-# import chardet
-# from io import BytesIO
-# from modules.status_view import display_status_updates
-
-# Import necessary libraries
 import requests
 from requests.auth import HTTPBasicAuth
 import plotly.graph_objs as go
@@ -42,6 +30,7 @@ def display_load_barchart(data, x_col, y_col, title="Bar Chart"):
 
     # Updating the layout of the figure
     fig.update_layout(
+        margin=dict(l=40, r=40, t=40, b=80),
         title=title,  # Chart title
         xaxis_title="Questionnaires",  # X-axis label
         yaxis_title=y_col.replace('_', ' ').title(),  # Y-axis label, making it more readable
@@ -83,7 +72,7 @@ def show_preview_table(data, msg, key):
     if st.button('Use Metadata'):
         # Update session state with selected metadata and columns
         st.session_state.update({
-            # 'metadata': data,
+            'metadata': data,
             'selected_item_column': selected_item_column,
             'selected_questionnaire_column': selected_questionnaire_column,
             'step1_completed': True,
@@ -92,7 +81,7 @@ def show_preview_table(data, msg, key):
             "question_counts_df": data.groupby(selected_questionnaire_column)
             [selected_item_column].nunique().reset_index(name=NUMBER_OF_QUESTIONS)
         })
-        # st.rerun()
+        st.rerun()
 
 
 def get_data():
@@ -221,10 +210,13 @@ def set_credentials():
 def fetch_loinc_codes(display_type):
     """Fetch LOINC codes based on the display type selected by the user."""
     codes = {
-        "Patient health questionnaire 4 item": "69724-3",
-        "Kansas City cardiomyopathy questionnaire": "71941-9",
+        "Alcohol Use Disorder Identification Test [AUDIT]": "72110-0",
+        "Alcohol Use Disorder Identification Test - Consumption [AUDIT-C]": "72109-2",
         "Generalized anxiety disorder 7 item": "69737-5",
-        "Test": "69723-5"
+        "Patient Health Questionnaire (PHQ)": "69723-5",
+        "PHQ-9 quick depression assessment panel": "44249-1",
+        "Patient health questionnaire 4 item": "69724-3",
+
     }
     if display_type == DISPLAY_RADIO_TEXT_2:
         return fetch_all_resources(LOINC_BASE_URL + "/Questionnaire")
@@ -353,12 +345,28 @@ def display_metadata_preview(loaded_file):
 
 def display_metadata_overview():
     """
-    Displays the metadata overview if the diagram data is ready.
+    Displays the metadata overview if the diagram data is ready, including the total number of unique questionnaires
+    and the total number of questions.
     """
     if st.session_state.get('diagram_data_ready', False) and st.session_state.get("question_counts_df") is not None:
+        # Assuming st.session_state["question_counts_df"] has columns for questionnaire IDs and question counts
+        questionnaire_column = st.session_state.selected_questionnaire_column  # The name of the column holding questionnaire IDs
+        question_count_column = NUMBER_OF_QUESTIONS  # The name of the column holding the count of questions
+
+        # Calculate the total number of unique questionnaires
+        total_unique_questionnaires = st.session_state["question_counts_df"][questionnaire_column].nunique()
+
+        # Calculate the total number of questions across all questionnaires
+        total_questions = st.session_state["question_counts_df"][question_count_column].sum()
+
+        # Display the total counts in a success box
+        st.success(f"Total number of questionnaires: {total_unique_questionnaires}\n\n"
+                   f"Total number of questions: {total_questions}")
+
+        # Call the function to display the bar chart (assuming it's implemented elsewhere in the code)
         display_load_barchart(
-            st.session_state["question_counts_df"].sort_values(by=NUMBER_OF_QUESTIONS, ascending=False),
-            st.session_state.selected_questionnaire_column, NUMBER_OF_QUESTIONS, "Metadata Overview")
+            st.session_state["question_counts_df"].sort_values(by=question_count_column, ascending=False),
+            questionnaire_column, question_count_column, "Metadata Overview")
 
 
 def show_load_data_tab():
