@@ -6,9 +6,6 @@ import streamlit_highcharts as hg
 import streamlit.components.v1 as components
 import plotly.graph_objs as go
 from streamlit_extras.dataframe_explorer import dataframe_explorer
-# import networkx as nx
-# from st_aggrid import AgGrid, ColumnsAutoSizeMode
-# from streamlit_echarts import st_echarts
 
 
 def dataframe_with_selections(df_in):
@@ -66,7 +63,7 @@ def calculate_edge_width(weight, max_width=20, min_width=1):
     return max_width if weight == 1 else max(min_width, weight * max_width)
 
 
-def get_graph_html(df_in, threshold_in):
+def get_graph_html(df_in):
     """
     Generates HTML for a network graph based on the similarity scores between questionnaire items.
 
@@ -88,11 +85,9 @@ def get_graph_html(df_in, threshold_in):
         t_q_label = row[QUESTIONNAIRE_2]
         w = row[SIMILARITY_SCORE]
         width = calculate_edge_width(round(w, 2))
-
-        if round(w, 2) >= threshold_in:
-            got_net.add_node(f"{src} ({s_q_label})", f"{src} ({s_q_label})", title=s_q_label)
-            got_net.add_node(f"{dst} ({t_q_label})", f"{dst} ({t_q_label})", title=t_q_label)
-            got_net.add_edge(f"{src} ({s_q_label})", f"{dst} ({t_q_label})", value=round(w, 2), width=width)
+        got_net.add_node(f"{src} ({s_q_label})", f"{src} ({s_q_label})", title=s_q_label)
+        got_net.add_node(f"{dst} ({t_q_label})", f"{dst} ({t_q_label})", title=t_q_label)
+        got_net.add_edge(f"{src} ({s_q_label})", f"{dst} ({t_q_label})", value=round(w, 2), width=width)
 
     # Set configuration options for nodes and interactions
     got_net.set_options('''
@@ -110,6 +105,77 @@ def get_graph_html(df_in, threshold_in):
     html_string = got_net.generate_html()
 
     return html_string
+
+
+def render_dependency_wheel_view_questions(data_in):
+    """
+    Renders a dependency wheel view in Streamlit using Highcharts.
+
+    This function processes a given DataFrame to visualize the count of connections
+    (rows) between pairs of questions based on their occurrence in the data.
+    Each connection's count reflects the number of times a specific pair of
+    questions appears together in the DataFrame.
+
+    Parameters:
+    - data_in: A DataFrame containing the columns "Question 1", "Question 2",
+               and "Similarity score", used to determine the connections.
+
+    The visualization is a dependency wheel that illustrates the interconnectedness
+    between different questions, highlighting the frequency of their relationships.
+    """
+
+    # Initialize a dictionary to count the connections
+    connections = {}
+
+    # Iterate over each row in the DataFrame to process question connections
+    for _, row in data_in.iterrows():
+        # Extract questions from each row
+        source = row['Question 1']
+        target = row['Question 2']
+        similarity_score = row['Similarity score']
+
+        # Key for unique question pairs, ensuring symmetry (i.e., A to B is the same as B to A)
+        key = tuple(sorted([source, target]))
+
+        # Increment count or initialize it for this pair
+        if key in connections:
+            connections[key] += similarity_score  # Summing or averaging might be more meaningful for scores
+        else:
+            connections[key] = similarity_score
+
+    # Convert the connections into the required format for the dependency wheel
+    new_data = [[source, target, score] for (source, target), score in connections.items()]
+
+    # Chart definition tailored for questions and their similarity scores
+    chartDef = {
+        'accessibility': {
+            'point': {
+                'valueDescriptionFormat': '{index}. From {point.from} to {point.to}: {point.weight}.'
+            }
+        },
+        'series': [{
+            'keys': ['from', 'to', 'weight'],
+            'data': new_data,
+            'type': 'dependencywheel',
+            'name': 'Question Relationship based on Similarity Score',
+            'size': '100%',
+            'dataLabels': {
+                'color': '#333',
+                'distance': 20,
+                'style': {'textOutline': 'none'},
+                'textPath': {
+                    'enabled': True,
+                    'attributes': {'dy': 5},
+                }
+            }
+        }],
+        'title': {
+            'text': 'Overview of Question Similarities'
+        }
+    }
+
+    # Render the chart in Streamlit using Highcharts
+    hg.streamlit_highcharts(chartDef, height=700)
 
 
 def render_dependency_wheel_view(data_in):
@@ -167,108 +233,22 @@ def render_dependency_wheel_view(data_in):
             },
             'keys': ['from', 'to', 'weight'],
             'name': 'Count of Semantic Similarity Pairs',
-            'size': '95%',
+            'size': '100%',
             'type': 'dependencywheel'
         }],
         'title': {
             'text': f'Overview for Similarity score between {round(data_in[SIMILARITY_SCORE].min(), 2)} and {round(data_in[SIMILARITY_SCORE].max(), 2)}'
-        }
+        },
+        'exporting': {
+            'enabled': True
+        },
+        'legend': {
+            'enabled': True
+        },
     }
 
     # Render the chart in Streamlit using Highcharts
     hg.streamlit_highcharts(chartDef, 700)
-
-
-def render_heatmap_view():
-    """
-    Renders a heatmap view in Streamlit using ECharts.
-
-    This function takes a filtered DataFrame stored in the Streamlit session state
-    and creates a heatmap visualization. The heatmap shows the number of questions
-    where the similarity score is equal to or greater than a predefined threshold
-    between pairs of questionnaires. Each cell in the heatmap represents the count
-    of such questions for a pair of questionnaires.
-    """
-    # Embed HTML content directly
-    # Aggregate the data to count the number of questions with a score >= 0.56
-    pivot_table = st.session_state.df_filtered.pivot_table(
-        index=QUESTIONNAIRE_1,
-        columns=QUESTIONNAIRE_2,
-        values=SIMILARITY_SCORE,
-        aggfunc=lambda x: x.sum()
-    ).fillna(0)
-
-    # Convert the pivoted table into a list of scores in the format [y_index, x_index, value]
-    questionnaires = pivot_table.index.tolist()
-    comparisons = pivot_table.columns.tolist()
-    scores = []
-    for i, questionnaire in enumerate(questionnaires):
-        for j, comparison in enumerate(comparisons):
-            scores.append([i, j, pivot_table.at[questionnaire, comparison]])
-
-    def create_heatmap(questionnaires_in, comparisons_in, scores_in):
-        """
-        Creates heatmap chart options for ECharts.
-
-        Parameters:
-        - questionnaires: List of questionnaire names for the y-axis.
-        - comparisons: List of questionnaire names for the x-axis.
-        - scores: List of [y_index, x_index, value] representing the heatmap data.
-
-        Returns:
-        - A dictionary containing ECharts heatmap options.
-        """
-        options = {
-            "tooltip": {
-                "position": "top"
-            },
-            "animation": False,
-            "grid": {
-                "height": "50%",
-                "top": "10%"
-            },
-            "xAxis": {
-                "type": "category",
-                "data": comparisons_in,
-                "splitArea": {
-                    "show": True
-                }
-            },
-            "yAxis": {
-                "type": "category",
-                "data": questionnaires_in,
-                "splitArea": {
-                    "show": True
-                }
-            },
-            "visualMap": {
-                "min": "0",
-                "max": "5",  # This should be dynamic or adjusted based on the data
-                "calculable": True,
-                "orient": "horizontal",
-                "left": "center",
-                "bottom": "15%"
-            },
-            "series": [{
-                "name": 'Score',
-                "type": 'heatmap',
-                "data": scores_in,
-                "label": {
-                    "show": True
-                },
-                "emphasis": {
-                    "itemStyle": {
-                        "shadowBlur": "10",
-                        "shadowColor": 'rgba(0, 0, 0, 0.5)'
-                    }
-                }
-            }]
-        }
-        return options
-
-    # Create the chart with the data
-    # heatmap_options = create_heatmap(questionnaires, comparisons, scores)
-    # st_echarts(options=heatmap_options, height="500px")
 
 
 def render_graph_view(df_sim):
@@ -287,20 +267,17 @@ def render_graph_view(df_sim):
     # Allow the user to choose between viewing all data or a filtered subset
     physics = st.selectbox('Choose a Graph', ["Filter", "All"])
 
-    # Allow the user to adjust the similarity score threshold for the visualization
-    threshold = st.slider("Similarity Score Threshold", 0.5, 1.0, 0.1)
-
     # A button to trigger the graph visualization
     if st.button(f'View Graph'):
         with st.spinner("Generating Graph..."):
 
             # Display the graph for all data if selected
             if physics == "All":
-                graph_html = get_graph_html(df_sim, threshold)
+                graph_html = get_graph_html(df_sim)
 
             # Display the graph for the filtered data if selected
             if physics == "Filter":
-                graph_html = get_graph_html(st.session_state.df_filtered, threshold)
+                graph_html = get_graph_html(st.session_state.df_filtered)
 
             # Read and display the generated HTML graph
 
@@ -317,6 +294,7 @@ def render_match_view():
     questionnaires_df = st.session_state.metadata
     similarities_df = st.session_state.df_filtered
     results = []  # Initialize a list to store results
+    empty_rows = []
 
     # Iterate through each questionnaire
     for questionnaire_id in questionnaires_df[st.session_state.selected_questionnaire_column].unique():
@@ -339,7 +317,6 @@ def render_match_view():
         questionnaire_matches.discard(questionnaire_id)  # Remove the current questionnaire from the set
         num_questionnaire_matches = list(questionnaire_matches)
 
-        empty_rows = []
         if len(num_questionnaire_matches) == 0:
             empty_rows.append(questionnaire_id)
 
@@ -393,41 +370,50 @@ def render_match_view():
 
 
 def show_explore_tab():
-    if st.session_state.similarity is None:
+    if st.session_state.get('similarity') is None:
         st.info('You have to select data and build embeddings for viewing similarity')
-    else:
-        sim_container = st.container()
-        df_sim = st.session_state.similarity
+        return
 
-        with sim_container.expander("Filtering"):
-            st.subheader('Filter tree')
-            st.session_state.df_filtered = dataframe_explorer(df_sim, case=False)
-            st.data_editor(st.session_state.df_filtered, use_container_width=True, column_config={
-                SIMILARITY_SCORE: st.column_config.ProgressColumn(
-                    "Similarity",
-                    help="The cosine similarity score",
-                    format="%.2f",
-                    min_value=0,
-                    max_value=1,
-                ),
-            }, key="Filtering")
+    sim_container = st.container()
+    df_sim = st.session_state['similarity']
 
-            st.subheader('Filtered DataFrame')
-            # df_filtered = df_sim.query(query_string)
-            size = len(st.session_state.df_filtered)
-            st.info(f"Filtered {size} elements")
+    # New section for pre-filtering with a Radio button
+    filter_threshold = sim_container.radio("Filter by similarity score:",
+                                           ["No filter", "Apply filter (>= 0.5)"], index=0)
 
-            selection = dataframe_with_selections(st.session_state.df_filtered)
+    if filter_threshold == "Apply filter (>= 0.5)":
+        df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= 0.5]
 
-            if st.button('➕ Add selected candidates to final selection'):
-                add_to_selection(selection)
+    with sim_container.expander("Filtering"):
+        st.subheader('Filter tree')
+        # Now df_sim is either filtered or unfiltered based on the Radio selection
+        st.session_state['df_filtered'] = dataframe_explorer(df_sim, case=False)
+        st.data_editor(st.session_state['df_filtered'], use_container_width=True, column_config={
+            SIMILARITY_SCORE: st.column_config.ProgressColumn(
+                "Similarity",
+                help="The cosine similarity score",
+                format="%.2f",
+                min_value=0,
+                max_value=1,
+            ),
+        }, key="Filtering")
 
-            st.divider()
-            if SELECTED_DATA in st.session_state and not st.session_state.selected_data.empty:
-                st.subheader("Final Harmonisation Candidates")
-                st.dataframe(st.session_state.selected_data, use_container_width=True)
+        st.subheader('Filtered DataFrame')
+        size = len(st.session_state['df_filtered'])
+        st.info(f"Filtered {size} elements")
 
-            excel = convert_df_to_excel(st.session_state.selected_data)
+        selection = dataframe_with_selections(st.session_state['df_filtered'])
+
+        if st.button('➕ Add selected candidates to final selection'):
+            add_to_selection(selection)
+
+        st.divider()
+
+        if 'selected_data' in st.session_state and not st.session_state['selected_data'].empty:
+            st.subheader("Final Harmonisation Candidates")
+            st.dataframe(st.session_state['selected_data'], use_container_width=True)
+
+            excel = convert_df_to_excel(st.session_state['selected_data'])
             if excel is not None:
                 st.download_button(
                     label="Download Final Selection as Excel",
@@ -436,11 +422,7 @@ def show_explore_tab():
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
 
-        with sim_container.expander("Explore"):
-
-            render_dependency_wheel_view(st.session_state.df_filtered)
-
-            render_match_view()
-
-            render_graph_view(st.session_state.df_filtered)
-            # render_heatmap_view()
+    with sim_container.expander("Explore"):
+        render_dependency_wheel_view(st.session_state['df_filtered'])
+        render_match_view()
+        render_graph_view(st.session_state['df_filtered'])

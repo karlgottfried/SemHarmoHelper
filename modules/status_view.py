@@ -27,7 +27,6 @@ def initialize_session_state():
         if key not in st.session_state:
             st.session_state[key] = value
     # Rerun the Streamlit script to update session state
-    st.rerun()
 
 
 # Function to display status updates based on session state flags

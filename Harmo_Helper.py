@@ -1,28 +1,50 @@
 import streamlit as st
+from config import TOOLNAME
 
 st.set_page_config(
     page_title="Harmonisation Helper",
     page_icon="📒 ",
+    layout="wide"
 )
 
-st.write("# Welcome to Harmonisation Helper!")
-
-st.sidebar.success("Select a demo above.")
+st.write("# 📒Welcome to Harmonisation Helper!")
 
 st.markdown(
-    """
-    Streamlit is an open-source app framework built specifically for
-    Machine Learning and Data Science projects.
-    **👈 Select a demo from the sidebar** to see some examples
-    of what Streamlit can do!
-    ### Want to learn more?
-    - Check out [streamlit.io](https://streamlit.io)
-    - Jump into our [documentation](https://docs.streamlit.io)
-    - Ask a question in our [community
-        forums](https://discuss.streamlit.io)
-    ### See more complex demos
-    - Use a neural net to [analyze the Udacity Self-driving Car Image
-        Dataset](https://github.com/streamlit/demo-self-driving)
-    - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
+    f"""
+### 🎯 Motivation
+
+This tool is designed to facilitate the semantic harmonization of multi-item based questionnaires using embedding-based methods. It allows you to generate semantic embeddings from text data and utilize these embeddings to identify similarity between questionnaire items.  
+The process is divided into a series of steps that will guide you through the harmonization journey.
+
+### Step 1️⃣: [Data Exploration](Data_Explore) (Under Development)
+This section is dedicated to the extraction of metadata from tabular data. It is currently in development and will be available soon to enhance your data preparation phase.
+
+### Step 2️⃣: [{TOOLNAME}](Semantic_Search_Helper)
+In the "{TOOLNAME}" section, select the model to use for generating embeddings:
+- **ADA**: Choose an ADA model version from the dropdown list and enter your OpenAI API key. This step is necessary to compute ADA embeddings.
+- **SBERT**: Select the appropriate Sentence Transformer model from the dropdown list that best matches your language and use case.
+
+After selecting your model, click on the "Calculate Embeddings" button to begin the embedding computation.
+
+### Step 3️⃣: Build Similarity Pairs
+Once embeddings are calculated, you can proceed to identify similar sentences or documents in the "Build Similarity Pairs" section.
+
+### Step 4️⃣: Select and Explore Pairs
+Finally, in the "Select and Explore Pairs" section, you can review and analyze the matched pairs to gain deeper insights.
+
+### Upcoming Features
+- **Syntactic Harmonization**: We are working to include syntactic harmonization as an additional step, which will further refine the alignment of your questionnaires.
+
+### Useful Tips
+- Ensure your text data is clean and prepared to obtain the best results from semantic search.
+- Protect your API key when using the ADA model approach—do not share it. It is a confidential access token.
+- The computation of embeddings may take some time, depending on the volume of data and the chosen model. Please be patient.
+
+Good luck with your semantic harmonization!
+
+---
+
+To get started, simply select the "Semantic Search Helper" tab and follow the steps outlined above.
+
 """
 )
