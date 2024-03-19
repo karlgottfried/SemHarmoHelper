@@ -2,6 +2,9 @@
 
 # Semantic Similarity Detection in Multi-Item Questionnaires with HarmoHelper
 
+The "SemHarmoHelper" repository features an application that helps in the detection of semantic similarity within multi-item questionnaires, aimed at facilitating the data harmonization process. It provides a workflow overview, UI overview, script features, and an about section describing its functionalities, such as data import, environment setup, Streamlit integration, data upload functionality, sentence embedding, similarity calculation, and more. 
+The app utilizes Python libraries for data analysis and Streamlit for web app development, making it a valuable tool for researchers and data analysts. For a detailed overview and to explore the app's capabilities, read the [publication]().
+
 ## Workflow Overview
 ![Local Image](Harmo_Helperv3.png)
 
@@ -42,3 +45,50 @@ script features integration with various Python libraries and APIs to perform da
 9. **Embedding and Similarity Tabs**: The script includes tabs for loading data, building embeddings, creating similarity pairs, and viewing these pairs, indicating a step-by-step process for users to follow in the web application.
 
 Overall, this script seems ideal for researchers and data analysts looking to harmonize and analyze text-based data, especially from multiple sources or studies. The integration with machine learning models for text similarity and the user-friendly Streamlit interface makes it a powerful tool for complex data harmonization tasks.
+
+Sure, I'll provide the installation and running instructions in English, formatted in Markdown:
+
+---
+
+## Installation and Running Instructions
+
+To start the application, you need to ensure Docker is installed on your system as the application is run within a Docker container. Follow these steps to install and run the application:
+
+
+
+
+### Prerequisites:
+- Ensure Docker is installed on your system. If not, download and install Docker from the [official Docker website](https://docs.docker.com/get-docker/).
+
+### Steps:
+
+1. **Download Application Code:**
+   Download the application code (including the `Dockerfile` and `requirements.txt`) to a directory of your choice.
+
+2. **Build Docker Image:**
+   Open a command line or terminal and navigate to the directory containing the `Dockerfile`. Execute the following command to build the Docker image:
+   ```bash
+   docker build -t harmo-app .
+   ```
+
+3. **Run Docker Container:**
+   After successfully building the image, start the container with the following command. This command runs the Streamlit application inside the Docker container and makes it accessible on port 8501 of your host system:
+   ```bash
+   docker run -p 8501:8501 harmo-app
+   ```
+
+4. **Access Application in Browser:**
+   Open a web browser of your choice and navigate to the following URL to access the Streamlit application:
+   ```
+   http://localhost:8501
+   ```
+
+### Notes:
+
+- The command `docker build -t harmo-app .` reads the `Dockerfile` in the current directory (`.`) and builds a Docker image based on the instructions defined within it.
+- The `docker run` command starts a container based on the created image. The parameter `-p 8501:8501` forwards port 8501 of the container to port 8501 of your host system, allowing you to access the Streamlit application through your browser.
+- If you make changes to the application code, you will need to rebuild the Docker image to incorporate the changes.
+
+By following these steps, you can locally install and run the "Semantic Similarity Detection in Multi-Item Questionnaires with HarmoHelper" application on your computer.
+
+---
