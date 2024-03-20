@@ -10,7 +10,7 @@ requests
 scikit-learn
 sentence-transformers
 streamlit>=1.31.1,<2.0
-streamlit-highcharts
+streamlit-highcharts>=0.1.5
 streamlit_extras
 streamlit_pandas_profiling
 streamlit-condition-tree

@@ -107,75 +107,66 @@ def get_graph_html(df_in):
     return html_string
 
 
-def render_dependency_wheel_view_questions(data_in):
+def render_heatmap_view(data_in):
     """
-    Renders a dependency wheel view in Streamlit using Highcharts.
+    Renders a heatmap view in Streamlit using Plotly.
 
     This function processes a given DataFrame to visualize the count of connections
-    (rows) between pairs of questions based on their occurrence in the data.
-    Each connection's count reflects the number of times a specific pair of
-    questions appears together in the DataFrame.
+    (rows) between pairs of questionnaires based on their occurrence in the data.
+    Each cell in the heatmap represents the frequency of a specific pair of
+    questionnaires appearing together.
 
     Parameters:
-    - data_in: A DataFrame containing the columns "Question 1", "Question 2",
-               and "Similarity score", used to determine the connections.
-
-    The visualization is a dependency wheel that illustrates the interconnectedness
-    between different questions, highlighting the frequency of their relationships.
+    - data_in: A DataFrame containing the columns "Questionnaire 1", "Questionnaire 2",
+               and "Similarity score", used to determine the counts.
     """
 
-    # Initialize a dictionary to count the connections
-    connections = {}
+    # Count the connections
+    connection_counts = pd.crosstab(data_in[QUESTIONNAIRE_1], data_in[QUESTIONNAIRE_2], margins=True, margins_name="Total")
 
-    # Iterate over each row in the DataFrame to process question connections
-    for _, row in data_in.iterrows():
-        # Extract questions from each row
-        source = row['Question 1']
-        target = row['Question 2']
-        similarity_score = row['Similarity score']
+    # Prepare custom hover text
+    hover_text = [
+        [
+            f'Questionnaire 1: {row}<br>Questionnaire 2: {col}<br>Number of Matches: {connection_counts.loc[row, col]}'
+            for col in connection_counts.columns
+        ]
+        for row in connection_counts.index
+    ]
 
-        # Key for unique question pairs, ensuring symmetry (i.e., A to B is the same as B to A)
-        key = tuple(sorted([source, target]))
+    # Create the heatmap with annotations
+    fig = go.Figure(data=go.Heatmap(
+        z=connection_counts.values,  # Values to be used for heatmap colors
+        x=connection_counts.columns,  # Column labels
+        y=connection_counts.index,  # Row labels
+        colorscale='Rainbow',  # Heatmap color scale
+        text=connection_counts.values.astype(str),  # Text to be displayed on each cell for annotations
+        hoverinfo='text',  # Use custom text for hover info
+        hovertext=hover_text,  # Custom hover text
+        showscale=False  # Hide the color bar
+    ))
 
-        # Increment count or initialize it for this pair
-        if key in connections:
-            connections[key] += similarity_score  # Summing or averaging might be more meaningful for scores
-        else:
-            connections[key] = similarity_score
+    # Adding annotations by enabling 'texttemplate'
+    fig.update_traces(texttemplate="%{text}", textfont={"size": 10})
 
-    # Convert the connections into the required format for the dependency wheel
-    new_data = [[source, target, score] for (source, target), score in connections.items()]
+    # Update layout
+    fig.update_layout(
+        title=f'Number of Pairs Between Questionnaires',
+        xaxis_nticks=36,
+        yaxis_nticks=36,
+        xaxis_title="Questionnaire 2",
+        yaxis_title="Questionnaire 1",
+        autosize=True,  # Auto adjust the size based on the screen or container size
+        height=650
+    )
+    # Displaying the figure in the Streamlit app, using the full container width
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Chart definition tailored for questions and their similarity scores
-    chartDef = {
-        'accessibility': {
-            'point': {
-                'valueDescriptionFormat': '{index}. From {point.from} to {point.to}: {point.weight}.'
-            }
-        },
-        'series': [{
-            'keys': ['from', 'to', 'weight'],
-            'data': new_data,
-            'type': 'dependencywheel',
-            'name': 'Question Relationship based on Similarity Score',
-            'size': '100%',
-            'dataLabels': {
-                'color': '#333',
-                'distance': 20,
-                'style': {'textOutline': 'none'},
-                'textPath': {
-                    'enabled': True,
-                    'attributes': {'dy': 5},
-                }
-            }
-        }],
-        'title': {
-            'text': 'Overview of Question Similarities'
-        }
-    }
-
-    # Render the chart in Streamlit using Highcharts
-    hg.streamlit_highcharts(chartDef, height=700)
+    # Display explanatory text for the heatmap visualization
+    st.info("""
+    This heatmap visualizes the number of harmonization pairs between different questionnaires. Each cell represents the count of times two questionnaires have been paired together, providing insights into the most common pairings and the relative frequency of each pairing.
+    Hover over any cell to see detailed information about the pairing, including the names of both questionnaires and the exact count of harmonization pairs.
+    """)
+    st.divider()
 
 
 def render_dependency_wheel_view(data_in):
@@ -237,7 +228,7 @@ def render_dependency_wheel_view(data_in):
             'type': 'dependencywheel'
         }],
         'title': {
-            'text': f'Overview for Similarity score between {round(data_in[SIMILARITY_SCORE].min(), 2)} and {round(data_in[SIMILARITY_SCORE].max(), 2)}'
+            'text': f'Questionnaire Relationship Overview'
         },
         'exporting': {
             'enabled': True
@@ -249,6 +240,14 @@ def render_dependency_wheel_view(data_in):
 
     # Render the chart in Streamlit using Highcharts
     hg.streamlit_highcharts(chartDef, 700)
+
+    # Place this right before or after the visualization in your Streamlit application.
+    st.info("""
+    The Dependency Wheel visualization offers an interactive and comprehensive view of the relationships between different questionnaires. Each arc on the wheel represents a connection, illustrating how frequently pairs of questionnaires are related to each other based on a specific similarity measure.
+    This visualization assists in identifying which questionnaires are most frequently paired, potentially indicating areas with higher harmonization potential or common themes. Use this tool to explore the data network and to inform decisions about questionnaire selection.
+    Please interact with the Dependency Wheel to discover patterns and insights about the questionnaire relationships within the dataset.
+    """)
+    st.divider()
 
 
 def render_graph_view(df_sim):
@@ -280,7 +279,6 @@ def render_graph_view(df_sim):
                 graph_html = get_graph_html(st.session_state.df_filtered)
 
             # Read and display the generated HTML graph
-
             if get_graph_html:
                 components.html(graph_html, height=600)
 
@@ -331,12 +329,11 @@ def render_match_view():
 
             })
 
-    st.info(f"The following {len(empty_rows)} questionnaires do not have any suited matching pairs {list(empty_rows)}")
     # Convert the results into a DataFrame and sort it by the number of questions
     result_matching_df = pd.DataFrame(results).sort_values(by=NUMBER_OF_QUESTIONS, ascending=False)
 
     # Display the DataFrame in Streamlit
-    st.data_editor(result_matching_df, use_container_width=True, column_config={
+    st.data_editor(result_matching_df[[QUESTIONNAIRE_ID,NUMBER_OF_QUESTIONS,ITEM_MATCHES,PERCENT_MATCHES]], use_container_width=True, column_config={
         PERCENT_MATCHES: st.column_config.ProgressColumn(
             help="The cosine similarity score",
             format="%.2f",
@@ -345,6 +342,38 @@ def render_match_view():
         ),
     }, hide_index=True)
 
+    # Sort the dataframe once
+    # Sort the DataFrame in descending order by match percentages
+    sorted_df = result_matching_df.sort_values(by=PERCENT_MATCHES, ascending=False)
+
+    # Directly extract the first example, avoiding separate variables for each attribute
+    first_example = sorted_df.iloc[0]
+
+    # Calculate the minimum and maximum similarity scores once, outside the info string
+    min_similarity_score = round(similarities_df[SIMILARITY_SCORE].min(), 2)
+    max_similarity_score = round(similarities_df[SIMILARITY_SCORE].max(), 2)
+
+    # Prepare the list of excluded questionnaires beforehand
+    excluded_questionnaires = ', '.join(empty_rows) if empty_rows else 'None'
+
+    # Use an f-string for the info display, integrating values directly
+    st.info(f"""
+    The table offers an overview of the questionnaires, highlighting:
+    - The **number of questions** each questionnaire contains.
+    - The **number of matching questions** that meet a similarity score between {min_similarity_score} and {max_similarity_score} (according to the filter criteria).
+    - The corresponding **match percentages**.
+
+    **{len(empty_rows)}** questionnaires lacked suitable matching pairs and have been excluded from the list:
+    - **Excluded Questionnaires:** {excluded_questionnaires}
+
+    Among the questionnaires presented, '**{first_example[QUESTIONNAIRE_ID]}**' comprises **{first_example[NUMBER_OF_QUESTIONS]}** questions, exhibiting the highest match percentage at **{first_example[PERCENT_MATCHES]}%**. This reflects that **{first_example[PERCENT_MATCHES]}%** of its questions have semantically similar content (as defined by the filter criteria) in at least one other questionnaire, indicating a significant potential for data harmonization. This questionnaire matches with the following **{len(list(first_example[QUESTIONNAIRE_MATCHES]))}** questionnaires: (**{", ".join(list(first_example[QUESTIONNAIRE_MATCHES]))}**).
+
+    A **100% match rate** indicates that every question finds a corresponding match in another questionnaire, denoting a full potential for data harmonization.
+
+    Use this summary to identify which questionnaires present the most extensive opportunities for data alignment and integration.
+    """)
+
+    st.divider()
     # Dropdown for choosing the sort column
     sort_option = st.selectbox(
         'Choose your sort column:',
@@ -368,6 +397,14 @@ def render_match_view():
     # Display the plot in Streamlit using container width
     st.plotly_chart(fig, use_container_width=True)
 
+    st.info("""
+    The bar chart visualizes a semantic similarity analysis across various assessments, which are represented by their acronyms. Each assessment's total number of questions is indicated by dark blue bars, while the light blue bars show the number of questions that have a certain level of semantic similarity to a specific set of criteria or a benchmark dataset.
+
+    By using the 'Choose your sort column' feature, you can arrange the assessments based on different attributes, such as the percentage of semantically similar item matches. This could rearrange the assessments along the horizontal axis according to your selected metric.
+
+    This graphical representation aids in identifying which assessments have a larger pool of questions and which have a higher proportion of questions that are semantically related to the targeted subject matter. Such insights are valuable for evaluating the relevance and coverage of the assessments in relation to the semantic criteria defined for the analysis.
+    """)
+
 
 def show_explore_tab():
     if st.session_state.get('similarity') is None:
@@ -379,10 +416,13 @@ def show_explore_tab():
 
     # New section for pre-filtering with a Radio button
     filter_threshold = sim_container.radio("Filter by similarity score:",
-                                           ["No filter", "Apply filter (>= 0.5)"], index=0)
+                                           ["No filter", "Apply filter (>= 0.5)", "Apply filter (>= 0.75)"], index=0, horizontal=True)
 
     if filter_threshold == "Apply filter (>= 0.5)":
         df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= 0.5]
+
+    if filter_threshold == "Apply filter (>= 0.75)":
+        df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= 0.75]
 
     with sim_container.expander("Filtering"):
         st.subheader('Filter tree')
@@ -424,5 +464,6 @@ def show_explore_tab():
 
     with sim_container.expander("Explore"):
         render_dependency_wheel_view(st.session_state['df_filtered'])
+        render_heatmap_view(st.session_state['df_filtered'])
         render_match_view()
         render_graph_view(st.session_state['df_filtered'])

@@ -41,10 +41,6 @@ def dataview_component(index, path_in):
             df_loc = pd.read_csv(path_in[index], encoding="utf-16")
             st.write(df_loc)
 
-            # Slider to select sampling fraction for report generation
-            sampling_fraction_loc = st.slider("Select sampling fraction for report generation", min_value=0.01,
-                                              max_value=1.00, value=0.05, step=0.01, key=f"slider_{index}")
-
             # Generate profile report if not already generated
             profile_key_loc = f'profile_{path_in[index].name}'
             if profile_key_loc not in st.session_state:
@@ -55,23 +51,23 @@ def dataview_component(index, path_in):
             # Display metrics from the profile report
             try:
                 json_data_loc = st.session_state[profile_key_loc]
-                num_elements = len(json_data_loc["table"]["types"])
-                columns = st.columns(num_elements)
-                number_of_observations = json_data_loc["table"]["n"]
-                number_of_variables = json_data_loc["table"]["n_var"]
-                number_of_numeric_vars = json_data_loc["table"]["types"]["Numeric"]
-                number_of_text_vars = json_data_loc["table"]["types"]["Text"]
+                # num_elements = len(json_data_loc["table"]["types"])
+                # columns = st.columns(num_elements)
+                number_of_observations_loc = json_data_loc["table"]["n"]
+                number_of_variables_loc = json_data_loc["table"]["n_var"]
+                number_of_numeric_vars_loc = json_data_loc["table"]["types"]["Numeric"]
+                number_of_text_vars_loc = json_data_loc["table"]["types"]["Text"]
 
                 # Display metrics using columns
                 col1_loc, col2_loc, col3_loc, col4_loc = st.columns(4)
                 with col1_loc:
-                    st.metric("Number of variables", number_of_variables)
+                    st.metric("Number of variables", number_of_variables_loc)
                 with col2_loc:
-                    st.metric("Number of observations", number_of_observations)
+                    st.metric("Number of observations", number_of_observations_loc)
                 with col3_loc:
-                    st.metric("Numeric", number_of_numeric_vars)
+                    st.metric("Numeric", number_of_numeric_vars_loc)
                 with col4_loc:
-                    st.metric("Text", number_of_text_vars)
+                    st.metric("Text", number_of_text_vars_loc)
                 st.session_state['initialized_expanders'][expander_key] = True
                 st.divider()
             except:
@@ -149,16 +145,19 @@ if path:
             st.write("Stats for filtered table:")
             col11, col12 = st.columns(2)
             with col11:
-                st.metric("Table Count", len(st.session_state.filtered_df["Table Name"].unique()), len(st.session_state.filtered_df["Table Name"].unique())-len(selected_files))
+                st.metric("Table Count", len(st.session_state.filtered_df["Table Name"].unique()),
+                          len(st.session_state.filtered_df["Table Name"].unique()) - len(selected_files))
             with col12:
-                st.metric("Variable Count", len(st.session_state.filtered_df), len(st.session_state.filtered_df)-len(st.session_state.df_descriptions))
+                st.metric("Variable Count", len(st.session_state.filtered_df),
+                          len(st.session_state.filtered_df) - len(st.session_state.df_descriptions))
 
         # Display vocabulary used in the filtered variables
         if st.session_state.df_voc is not None:
             st.divider()
             st.write("Vocabulary used in the filtered variables")
             unique_pairs = st.session_state.filtered_df[["Table Name", "Variable"]].drop_duplicates()
-            filtered_df_voc = pd.merge(st.session_state.df_voc, unique_pairs, on=["Table Name", "Variable"], how="inner")
+            filtered_df_voc = pd.merge(st.session_state.df_voc, unique_pairs, on=["Table Name", "Variable"],
+                                       how="inner")
             st.session_state.df_voc_filtered = filtered_df_voc
             st.dataframe(st.session_state.df_voc_filtered)
             col111, col222 = st.columns(2)
@@ -189,13 +188,15 @@ if file is not None:
     st.write(st.session_state.data_df)
 
     # Slider to select the sampling fraction for report generation
-    sampling_fraction = st.slider("Select sampling fraction for report generation", min_value=0.01, max_value=1.00, value=0.05, step=0.01)
+    sampling_fraction = st.slider("Select sampling fraction for report generation", min_value=0.01, max_value=1.00,
+                                  value=0.05, step=0.01)
 
     if st.button("Generate Report"):
         # Sample the data based on the selected fraction
         sample = st.session_state.data_df.sample(frac=sampling_fraction)
         description = f"Disclaimer: this profiling report was generated using a sample of {sampling_fraction * 100}% of the original dataset."
-        st.session_state.profile = ProfileReport(sample, dataset={"description": description}, minimal=True, progress_bar=True, title="Profiling Report")
+        st.session_state.profile = ProfileReport(sample, dataset={"description": description}, minimal=True,
+                                                 progress_bar=True, title="Profiling Report")
 
         # Convert the report to JSON and load as a Python object
         json_data = st.session_state.profile.to_json()

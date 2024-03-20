@@ -28,6 +28,8 @@ def show_explore_embedding_tab():
 
         # Display topics and their representations using data editor
         st.data_editor(topic_model.get_topic_info()[["Topic", "Representation"]], use_container_width=True, hide_index=True)
+        st.info("""**Topic Representation Table:** Provides a quick overview of the topics identified by the BERTopic model with a list of keywords that best represent the content of each topic.""")
+        st.divider()
 
         # Dimensionality reduction on embeddings using UMAP
         reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
@@ -48,9 +50,16 @@ def show_explore_embedding_tab():
         # Display sentences and topics using data editor
         st.data_editor(df_reduced[["Sentence", "Topic"]], use_container_width=True, hide_index=True)
 
+        st.info("""**Sentences and Topics Assignment:** Displays the question sentences alongside the topics they're associated with, allowing to see how the model categorizes the text data into different topics.
+        """)
+        st.divider()
+
         # Create and display a 3D scatter plot of reduced embeddings
         fig_3d = px.scatter_3d(df_reduced, x="UMAP 1", y="UMAP 2", z="UMAP 3", color='Topic', hover_data=["Sentence", "Topic"], color_continuous_scale=px.colors.qualitative.Bold, labels={"color": "Topic"}).update_traces(hovertemplate='Sentence: %{customdata[0]}<br>Topic: %{customdata[1]}')
         st.plotly_chart(fig_3d, use_container_width=True)
+
+        st.info("""**3D Scatter Plot Visualization:** Offers an interactive 3D visualization of the calculated sentence embeddings, grouped by topic. It’s useful for exploring the data structure and understanding the relationships and distances between different groups of sentences.
+        """)
 
 
 # Function to fetch embeddings for a given text using a specified model
@@ -108,6 +117,10 @@ def show_embedding_tab():
             # Function call to calculate and display embeddings
             calculate_and_display_embeddings(model_options, model, openai_api_key if model_options == MODEL_ADA else None)
 
+    if st.session_state[EMBEDDING] is not None:
+        display_embeddings_table(st.session_state[EMBEDDING])
+        show_explore_embedding_tab()  # Show the tab for exploring embeddings
+
 
 # Function to calculate and display embeddings for the selected model
 def calculate_and_display_embeddings(model_options, model, api_key=None):
@@ -117,22 +130,16 @@ def calculate_and_display_embeddings(model_options, model, api_key=None):
 
     # Calculate embeddings based on the model selected and whether an API key is provided
     if model_options == MODEL_ADA and api_key:
-        df = calculate_embeddings(df, model, sentences, model_options, api_key)
+        st.session_state[EMBEDDING] = calculate_embeddings(df, model, sentences, model_options, api_key)
     elif model_options == MODEL_SBERT:
-        df = calculate_embeddings(df, model, sentences, model_options)
+        st.session_state[EMBEDDING] = calculate_embeddings(df, model, sentences, model_options)
 
-    # Update session state with embeddings and proceed to display them
-    if df is not None:
-        st.session_state[EMBEDDING] = df
-    if st.session_state[EMBEDDING] is not None:
-        display_embeddings_table(st.session_state[EMBEDDING])
-        mark_step_completed(start_time)  # Mark operation as completed and display execution time
-        show_explore_embedding_tab()  # Show the tab for exploring embeddings
+    mark_step_completed(start_time)  # Mark operation as completed and display execution time
 
 
 # Function to display the embeddings table in the Streamlit UI
 def display_embeddings_table(df):
-    st.data_editor(df[[st.session_state['selected_item_column'], EMBEDDING]], use_container_width=True)
+    st.data_editor(df[[st.session_state[SELECTED_ITEM_COLUMN], EMBEDDING]], use_container_width=True)
 
 
 # Function to mark the completion of an operation and calculate its duration

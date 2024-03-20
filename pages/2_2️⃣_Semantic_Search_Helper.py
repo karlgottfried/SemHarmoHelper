@@ -25,7 +25,7 @@ def initialize_sidebar():
             st.rerun()
         st.write("""Clicking **"Restart Metadata Upload"** clears all data and resets the application, allowing you to start afresh with new uploads or analyses.
                           Use this button to easily correct mistakes, explore different data sets, or restart your analysis from scratch.
-                          """, unsafe_allow_html=True)
+                          """)
 
 
 def initialize_session_state():
@@ -59,6 +59,7 @@ def initialize_session_state():
         if key not in st.session_state:
             st.session_state[key] = value
     # No explicit rerun command here; ensure to rerun or refresh your Streamlit app as needed.
+
 
 def display_status_updates():
     """

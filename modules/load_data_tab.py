@@ -21,7 +21,7 @@ def display_load_barchart(data, x_col, y_col, title="Bar Chart"):
         x=data[x_col],  # X-axis data
         y=data[y_col],  # Y-axis data
         text=data[y_col],  # Text to display on each bar, showing the y-value
-        textposition='auto',  # Positioning the text automatically on the bars
+        textposition='outside',  # Positioning the text automatically on the bars
         opacity=0.7,
         hoverinfo='text',
         hovertext=[f'Questionnaire: {q}<br>Number of Questions: {n}' for q, n in zip(data[x_col], data[y_col])]
@@ -359,14 +359,17 @@ def display_metadata_overview():
         # Calculate the total number of questions across all questionnaires
         total_questions = st.session_state["question_counts_df"][question_count_column].sum()
 
-        # Display the total counts in a success box
-        st.success(f"Total number of questionnaires: {total_unique_questionnaires}\n\n"
-                   f"Total number of questions: {total_questions}")
-
+        st.divider()
         # Call the function to display the bar chart (assuming it's implemented elsewhere in the code)
         display_load_barchart(
             st.session_state["question_counts_df"].sort_values(by=question_count_column, ascending=False),
             questionnaire_column, question_count_column, "Metadata Overview")
+
+        st.info(f"""
+        This bar chart illustrates the number of questions each questionnaire contains, enabling a visual comparison of question counts among the given questionnaires.
+        
+        The data presented shows a total of **{total_unique_questionnaires} questionnaires**, encompassing **{total_questions} questions**.
+        """)
 
 
 def show_load_data_tab():

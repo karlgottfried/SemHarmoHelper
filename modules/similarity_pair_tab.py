@@ -44,17 +44,12 @@ def show_explore_sim_tab():
             max_value=1,
         ),
     }, key=f"data_frame_sim_{st.session_state['model_used']}", hide_index=True)
+    st.divider()
+
     # Calculate statistics: mean, median, and quartiles
     mean_ada = st.session_state.similarity[SIMILARITY_SCORE].mean()
     median_ada = st.session_state.similarity[SIMILARITY_SCORE].median()
     quartiles_ada = st.session_state.similarity[SIMILARITY_SCORE].quantile([0.25, 0.75])
-
-    # Display a success message summarizing the statistics
-    st.success(f"Calculated {len(st.session_state.similarity)} pairs with similarity scores.  \n"
-               f"Scores range from {st.session_state.similarity[SIMILARITY_SCORE].min():.2f} "
-               f"to {st.session_state.similarity[SIMILARITY_SCORE].max():.2f}. \n\n"
-               f"Mean: {mean_ada:.2f}, Median: {median_ada:.2f}, \n"
-               f"1st Quartile: {quartiles_ada[0.25]:.2f}, 3rd Quartile: {quartiles_ada[0.75]:.2f}.")
 
     # Create a histogram for the similarity scores
     fig = go.Figure(data=go.Histogram(x=st.session_state.similarity[SIMILARITY_SCORE],
@@ -100,6 +95,17 @@ def show_explore_sim_tab():
     fig.update_traces(hoverinfo='x+y', hovertemplate="Score: %{x}<br>Frequency: %{y}")
     # Display the plot in Streamlit
     st.plotly_chart(fig, use_container_width=True)
+    st.info(f"""
+    The histogram illustrates the distribution of similarity scores for {st.session_state["model_used"]} model and indicates the positions of statistical measures: Mean, Median, and Quartiles. Here's a concise summary of these statistical insights:
+
+    - **Number of Pairs with Similarity Scores:** A total of **{len(st.session_state.similarity)}** pairs were analyzed.
+    - **Range of Similarity Scores:** Scores extend from a minimum of **{st.session_state.similarity[SIMILARITY_SCORE].min():.2f}** to a maximum of **{st.session_state.similarity[SIMILARITY_SCORE].max():.2f}**.
+    - **Average (Mean):** The mean similarity score stands at **{mean_ada:.2f}**.
+    - **Median:** The median value, dividing the dataset into two equal halves, is **{median_ada:.2f}**.
+    - **Quartiles:** Specifically, the 1st Quartile (marking the 25th percentile) is **{quartiles_ada[0.25]:.2f}**, and the 3rd Quartile (marking the 75th percentile) is **{quartiles_ada[0.75]:.2f}**.
+
+    Leverage this information to deepen your understanding of the model's performance and to uncover any discernible patterns within the similarity scores.
+    """)
 
 
 def show_similarity_calculation_section(data, item_column, questionnaire_column):

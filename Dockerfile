@@ -7,12 +7,12 @@ WORKDIR /app
 # Upgrade pip and install dependencies in one layer to keep the image clean and small
 COPY requirements.txt ./
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    software-properties-common \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y --no-install-recommends \
+#    build-essential \
+#    curl \
+#    software-properties-common \
+#    git \
+#    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
@@ -23,6 +23,6 @@ COPY . .
 # Expose the port on which the Streamlit application runs
 EXPOSE 8501
 
-ENTRYPOINT ["streamlit", "run", "Harmo_Helper.py", "--server.port=8501", "--server.address=0.0.0.0"]
-# Execute the Streamlit application
-#CMD ["streamlit", "run", "Harmo_Helper.py"]
+ENTRYPOINT ["streamlit", "run", "Harmo_Helper.py", "--server.port=8501"]
+# , "--server.address=192.0.0.0"]
+
