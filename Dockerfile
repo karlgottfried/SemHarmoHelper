@@ -7,12 +7,12 @@ WORKDIR /app
 # Upgrade pip and install dependencies in one layer to keep the image clean and small
 COPY requirements.txt ./
 
-#RUN apt-get update && apt-get install -y --no-install-recommends \
-#    build-essential \
-#    curl \
-#    software-properties-common \
-#    git \
-#    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    software-properties-common \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt

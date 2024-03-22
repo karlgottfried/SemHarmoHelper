@@ -144,6 +144,7 @@ def display_embeddings_table(df):
     st.data_editor(df[[st.session_state[SELECTED_ITEM_COLUMN], EMBEDDING]], use_container_width=True)
 
 
+
 # Function to mark the completion of an operation and calculate its duration
 def mark_step_completed(start_time):
     end_time = time.time()  # End timing the operation
