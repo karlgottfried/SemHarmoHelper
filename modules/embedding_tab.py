@@ -17,10 +17,10 @@ def show_explore_embedding_tab():
     with st.expander("Explore Embedding Building Step", expanded=True):
         # Retrieve sentences to embed from the session state
         sentences = st.session_state[EMBEDDING][st.session_state[SELECTED_ITEM_COLUMN]].tolist()
-
-        # Topic modeling with BERTopic (commented out due to potential disuse in this context)
+        embeddings = np.array(list(st.session_state[EMBEDDING][EMBEDDING]))
+        # Topic modeling with BERTopic
         topic_model = BERTopic(min_topic_size=10)
-        topics, probs = topic_model.fit_transform(sentences, np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
+        topics, probs = topic_model.fit_transform(sentences, embeddings)
 
         # Save topics and probabilities in the session state
         st.session_state['topics'] = topics
@@ -28,11 +28,11 @@ def show_explore_embedding_tab():
 
         # Display topics and their representations using data editor
         st.data_editor(topic_model.get_topic_info()[["Topic", "Representation"]], use_container_width=True, hide_index=True)
-        st.info("""**Topic Representation Table:** Provides a quick overview of the topics identified by the BERTopic model with a list of keywords that best represent the content of each topic.""")
+        st.caption("""**Topic Representation Table:** Provides a quick overview of the topics identified by the BERTopic model with a list of keywords that best represent the content of each topic.""")
         st.divider()
 
         # Dimensionality reduction on embeddings using UMAP
-        reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(np.array(list(st.session_state[EMBEDDING][EMBEDDING])))
+        reduced_embeddings = UMAP(n_neighbors=10, n_components=3, min_dist=0.0, metric='cosine').fit_transform(embeddings)
         # Cluster reduced embeddings using HDBSCAN
         clusterer = hdbscan.HDBSCAN(min_cluster_size=15, gen_min_span_tree=True)
         cluster_labels = clusterer.fit_predict(reduced_embeddings)
@@ -50,7 +50,7 @@ def show_explore_embedding_tab():
         # Display sentences and topics using data editor
         st.data_editor(df_reduced[["Sentence", "Topic"]], use_container_width=True, hide_index=True)
 
-        st.info("""**Sentences and Topics Assignment:** Displays the question sentences alongside the topics they're associated with, allowing to see how the model categorizes the text data into different topics.
+        st.caption("""**Sentences and Topics Assignment:** Displays the question sentences alongside the topics they're associated with, allowing to see how the model categorizes the text data into different topics.
         """)
         st.divider()
 
@@ -76,34 +76,32 @@ def calculate_embeddings(data_in, model_name, sentences_in, model_selected):
             model_in = SentenceTransformer(model_name)  # Load Sentence Transformer model
             output = model_in.encode(sentences=sentences_in, show_progress_bar=True, normalize_embeddings=True)
             data_in[EMBEDDING] = list(output)  # Store embeddings in DataFrame
-            st.session_state["step2_completed"] = True
 
         if model_selected == MODEL_ADA:
             data_in[EMBEDDING] = sentences_in.apply(lambda x: get_embedding(x, model_name))
-            st.session_state["step2_completed"] = True
         return data_in  # Return DataFrame with embeddings
 
 
 # Function to display the embeddings tab in the Streamlit UI
-def show_embedding_tab():
-    # Check if metadata has been selected; if not, prompt the user to select data first
-    if st.session_state.get('metadata') is None:
-        st.info('You have to select data for viewing and editing. Switch to Step 1 tab first.')
-        return  # Early exit if no metadata is selected
+def main_embedding_tab():
 
     embedding_container = st.container()  # Container for the embeddings tab
 
     # Radio button for model selection between Sentence Transformers and OpenAI models
-    model_options = embedding_container.radio("Data Usage", options=[MODEL_SBERT, MODEL_ADA], horizontal=True)
+    model_options = choose_model(embedding_container)
     st.session_state['model_used'] = model_options  # Store selected model in session state
+
+    st.divider()
 
     # Conditional rendering based on selected model
     model = None
     if model_options == MODEL_ADA:
         # Dropdown for selecting an OpenAI model if ADA model is selected
+        # embeddings_data = handle_ada_model()
         model = embedding_container.selectbox("Select a model to process", ["text-embedding-ada-002", "text-embedding-3-small"])
         openai_api_key = st.text_input("OpenAI API Key", key="openai_api_key", type="password")  # API key input for OpenAI
     elif model_options == MODEL_SBERT:
+        # embeddings_data = handle_sbert_model()
         # Dropdown for selecting a Sentence Transformer model if SBERT is selected
         model = embedding_container.selectbox("Select a model to process", ['sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'])
 
@@ -120,6 +118,10 @@ def show_embedding_tab():
     if st.session_state[EMBEDDING] is not None:
         display_embeddings_table(st.session_state[EMBEDDING])
         show_explore_embedding_tab()  # Show the tab for exploring embeddings
+
+
+def choose_model(embedding_container):
+    return embedding_container.radio("Data Usage", options=[MODEL_SBERT, MODEL_ADA], horizontal=True)
 
 
 # Function to calculate and display embeddings for the selected model
@@ -146,5 +148,6 @@ def display_embeddings_table(df):
 def mark_step_completed(start_time):
     end_time = time.time()  # End timing the operation
     duration = (end_time - start_time) / 60  # Calculate duration in minutes
-    st.session_state['step2_completed'] = True  # Mark step as completed in session state
-    st.success(f"Embeddings calculated successfully in {duration:.2f} minutes.")  # Display success message with duration
+    st.session_state.update({'step2_completed': True,}) # Mark step as completed in session state
+    st.success(f"Embeddings calculated successfully in {duration:.2f} minutes.")
+    st.rerun()# Display success message with duration

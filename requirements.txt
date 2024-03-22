@@ -19,3 +19,4 @@ openpyxl
 umap-learn
 XlsxWriter
 ydata-profiling
+faiss-cpu

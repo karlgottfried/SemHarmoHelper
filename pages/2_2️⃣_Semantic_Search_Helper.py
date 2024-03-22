@@ -1,9 +1,9 @@
 import streamlit
 
-from modules.load_data_tab import show_load_data_tab, reset_app_state
-from modules.embedding_tab import show_embedding_tab
-from modules.similarity_pair_tab import show_similarity_pair_tab
-from modules.explore_tab import show_explore_tab
+from modules.load_data_tab import main_load_data_tab, reset_app_state
+from modules.embedding_tab import main_embedding_tab
+from modules.similarity_pair_tab import main_similarity_pair_tab
+from modules.explore_tab import main_explore_tab
 from config import *  # Import the status messages from the config
 
 # 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 💾
@@ -52,7 +52,11 @@ def initialize_session_state():
         'probs': None,  # Probabilities associated with topics
         'reduced_embeddings': None,  # UMAP reduced embeddings
         'cluster_labels': None,  # HDBSCAN cluster labels
-        'df_reduced': pd.DataFrame()  # DataFrame containing reduced embeddings and associated data
+        'df_reduced': pd.DataFrame(),  # DataFrame containing reduced embeddings and associated data
+        "step1_completed": False,
+        "step2_completed": False,
+        "step3_completed": False,
+        "step4_completed": False
     }
 
     for key, value in default_values.items():
@@ -88,6 +92,7 @@ def main():
 
     tabs = st.tabs(
         [STEP_LOAD_SENTENCE_DATA, STEP_BUILD_EMBEDDINGS, STEP_BUILD_SIMILARITY_PAIRS, STEP_SELECT_AND_EXPLORE_PAIRS])
+
     with tabs[0]:
         STEP_1_MARKDOWN = f"""
         ### Step 1: Load Sentence Data
@@ -116,7 +121,8 @@ def main():
         """
         with st.expander("Instructions and Tips"):
             st.markdown(STEP_1_MARKDOWN)
-        show_load_data_tab()
+        main_load_data_tab()
+
     with tabs[1]:
         STEP_2_MARKDOWN = """
             ### Step 2: Build Embeddings
@@ -137,7 +143,10 @@ def main():
             """
         with st.expander("Instructions and Tips"):
             st.markdown(STEP_2_MARKDOWN)
-        show_embedding_tab()
+
+        if st.session_state["step1_completed"]:
+            main_embedding_tab()
+
     with tabs[2]:
         STEP_3_MARKDOWN = f"""
         ### Step 3: Build Similarity Pairs
@@ -158,7 +167,10 @@ def main():
 
         with st.expander("Instructions and Tips"):
             st.markdown(STEP_3_MARKDOWN)
-        show_similarity_pair_tab()
+
+        if st.session_state["step2_completed"]:
+            main_similarity_pair_tab()
+
     with tabs[3]:
         STEP_4_MARKDOWN = """
             ### Step 4: Select and Explore Pairs
@@ -184,7 +196,9 @@ def main():
 
         with st.expander("Instructions and Tips"):
             st.markdown(STEP_4_MARKDOWN)
-        show_explore_tab()
+
+        if st.session_state["step3_completed"]:
+            main_explore_tab()
 
 
 if __name__ == "__main__":

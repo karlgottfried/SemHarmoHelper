@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import plotly.graph_objects as go
+import faiss
+import time
 
 
 def calculate_cosine_similarity(embeddings):
@@ -11,6 +13,12 @@ def calculate_cosine_similarity(embeddings):
     if embeddings.size > 0:
         return cosine_similarity(embeddings)
     return np.array([])
+
+
+# Funktion, um die Cosine-Ähnlichkeit zu berechnen
+def calculate_cosine_similarity_faiss(vec1, vec2):
+    # Vec1 und Vec2 sind 2D Arrays
+    return cosine_similarity(vec1, vec2)[0][0]
 
 
 def build_similarity_dataframe(df, cosine_sim_matrix, item_column, questionnaire_column):
@@ -44,6 +52,9 @@ def show_explore_sim_tab():
             max_value=1,
         ),
     }, key=f"data_frame_sim_{st.session_state['model_used']}", hide_index=True)
+    st.caption("Table Similarity Analysis: \n The table serves as a condensed representation of semantically paired items extracted from extensive questionnaire datasets, labeled as ""Questionnaire 1"" and ""Questionnaire 2"". "
+               "Each row correlates a specific item from the first questionnaire regarding to a semantically related item from other questionnaires. "
+               "These pairings are accompanied by a similarity score, a critical metric in the semantic harmonization process, which aids in evaluating the potential relevance of each item pair for integrative analysis")
     st.divider()
 
     # Calculate statistics: mean, median, and quartiles
@@ -95,7 +106,7 @@ def show_explore_sim_tab():
     fig.update_traces(hoverinfo='x+y', hovertemplate="Score: %{x}<br>Frequency: %{y}")
     # Display the plot in Streamlit
     st.plotly_chart(fig, use_container_width=True)
-    st.info(f"""
+    return f"""
     The histogram illustrates the distribution of similarity scores for {st.session_state["model_used"]} model and indicates the positions of statistical measures: Mean, Median, and Quartiles. Here's a concise summary of these statistical insights:
 
     - **Number of Pairs with Similarity Scores:** A total of **{len(st.session_state.similarity)}** pairs were analyzed.
@@ -105,30 +116,106 @@ def show_explore_sim_tab():
     - **Quartiles:** Specifically, the 1st Quartile (marking the 25th percentile) is **{quartiles_ada[0.25]:.2f}**, and the 3rd Quartile (marking the 75th percentile) is **{quartiles_ada[0.75]:.2f}**.
 
     Leverage this information to deepen your understanding of the model's performance and to uncover any discernible patterns within the similarity scores.
-    """)
+    """
 
 
 def show_similarity_calculation_section(data, item_column, questionnaire_column):
     """UI section for triggering similarity calculation."""
-    if st.button('Calculate Similarity'):
-        with st.spinner('Calculating similarity...'):
-            embeddings = np.array(data[EMBEDDING].tolist())  # Assuming data[EMBEDDING] is a list of lists
-            cosine_sim_matrix = calculate_cosine_similarity(embeddings)
-            st.session_state.similarity = build_similarity_dataframe(data, cosine_sim_matrix, item_column,
-                                                                     questionnaire_column)
-            st.session_state['step3_completed'] = True
+
+    with st.spinner('Calculating similarity with cosine similarity...'):
+        embeddings = np.array(data[EMBEDDING].tolist())
+        cosine_sim_matrix = calculate_cosine_similarity(embeddings)
+        return build_similarity_dataframe(data, cosine_sim_matrix, item_column, questionnaire_column)
 
 
-def show_similarity_pair_tab():
-    """Main function to manage the similarity pairs tab."""
-    if st.session_state.metadata is None or 'selected_item_column' not in st.session_state:
-        st.warning('You need to load data and select columns before proceeding.')
-        return
+def show_similarity_calculation_section_faiss(data, item_column, questionnaire_column):
+    """
+    UI section for triggering similarity calculation using FAISS.
 
-    show_similarity_calculation_section(
-        st.session_state[EMBEDDING],
-        st.session_state.selected_item_column,
-        st.session_state.selected_questionnaire_column
-    )
+    Parameters:
+    - data: The dataset containing embeddings and other information.
+    - item_column: The name of the column in 'data' that contains the items to compare.
+    - questionnaire_column: The name of the column in 'data' that indicates the questionnaire each item belongs to.
+    """
 
-    show_explore_sim_tab()
+    with st.spinner('Calculating similarity with FAISS...'):
+        # Convert the list of embeddings into a NumPy array
+        embeddings = np.array(data[EMBEDDING].tolist())
+
+        # Create a FAISS index for L2 distance
+        d = embeddings.shape[1]  # Dimensionality of embeddings
+        index = faiss.IndexFlatL2(d)
+
+        # Normalize the embeddings for cosine similarity
+        norm_embeddings = embeddings / np.linalg.norm(embeddings, axis=1)[:, np.newaxis]
+        index.add(norm_embeddings)  # Add normalized embeddings to the index
+
+        k = 20  # Number of nearest neighbors to find
+
+        output_results = []
+        seen_pairs = set()  # Set to store seen pairs to avoid duplicates
+
+        for i in range(len(data)):
+            # Search for the k+1 nearest neighbors because the search also returns the query itself
+            _, I = index.search(norm_embeddings[i:i + 1], k + 1)
+            for j in range(1, k + 1):  # Start from 1 to skip the query itself
+                neighbor_idx = I[0][j]
+
+                # Generate a unique ID for each pair
+                pair_id = frozenset([i, neighbor_idx])
+
+                # Ensure the neighbor is from a different questionnaire and the pair hasn't been seen before
+                if (data.iloc[i][questionnaire_column] != data.iloc[neighbor_idx][questionnaire_column]) and (
+                        pair_id not in seen_pairs):
+                    similarity_score = calculate_cosine_similarity_faiss(embeddings[i:i + 1],
+                                                                         embeddings[neighbor_idx:neighbor_idx + 1])
+
+                    # Append the result to output
+                    output_results.append({
+                        QUESTIONNAIRE_1: data.iloc[i][questionnaire_column],
+                        ITEM_1: data.iloc[i][item_column],
+                        QUESTIONNAIRE_2: data.iloc[neighbor_idx][questionnaire_column],
+                        ITEM_2: data.iloc[neighbor_idx][item_column],
+                        SIMILARITY_SCORE: similarity_score
+                    })
+                    seen_pairs.add(pair_id)  # Mark this pair as seen
+
+        return pd.DataFrame(output_results)
+
+
+def main_similarity_pair_tab():
+    """
+    Main function to manage the similarity pairs tab.
+
+    Allows the user to choose between COSINE_SIMILARITY and FAISS for calculating similarity.
+    Displays the execution time for the selected method.
+    """
+
+    similarity_mode = st.radio("Choose Similarity Mode", options=[COSINE_SIMILARITY, FAISS], horizontal=True)
+
+    start_time = time.time()  # Start timing the operation
+
+    if st.button('Calculate Similarity', key="button_2"):
+        # Calculate similarity based on the selected mode
+        if similarity_mode == COSINE_SIMILARITY:
+            st.session_state.similarity = show_similarity_calculation_section(
+                st.session_state[EMBEDDING],
+                st.session_state.selected_item_column,
+                st.session_state.selected_questionnaire_column
+            )
+        elif similarity_mode == FAISS:
+            st.session_state.similarity = show_similarity_calculation_section_faiss(
+                st.session_state[EMBEDDING],
+                st.session_state.selected_item_column,
+                st.session_state.selected_questionnaire_column
+            )
+
+    st.divider()
+
+    if st.session_state.similarity is not None:
+        end_time = time.time()
+        st.session_state.update({'step3_completed': True})
+        msg = show_explore_sim_tab()
+        msg_time = f"\n **The execution time of {similarity_mode} mode was: {end_time - start_time} seconds.**"
+        st.info(msg + msg_time)
+

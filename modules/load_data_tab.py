@@ -69,7 +69,7 @@ def show_preview_table(data, msg, key):
         selected_questionnaire_column = st.selectbox("Select the columns with the questionnaire names.", data.columns)
 
     # Button to confirm selection and update session state
-    if st.button('Use Metadata'):
+    if st.button('Use Metadata', help="Text"):
         # Update session state with selected metadata and columns
         st.session_state.update({
             'metadata': data,
@@ -372,7 +372,7 @@ def display_metadata_overview():
         """)
 
 
-def show_load_data_tab():
+def main_load_data_tab():
     """
     Displays options for uploading metadata from various sources and shows a preview table.
     Includes a button to reset the app state and reload the page for a fresh start.

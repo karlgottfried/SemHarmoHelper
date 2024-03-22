@@ -361,12 +361,12 @@ def render_match_view():
     The table offers an overview of the questionnaires, highlighting:
     - The **number of questions** each questionnaire contains.
     - The **number of matching questions** that meet a similarity score between {min_similarity_score} and {max_similarity_score} (according to the filter criteria).
-    - The corresponding **match percentages**.
+    - The corresponding **semantic coverage**.
 
     **{len(empty_rows)}** questionnaires lacked suitable matching pairs and have been excluded from the list:
     - **Excluded Questionnaires:** {excluded_questionnaires}
 
-    Among the questionnaires presented, '**{first_example[QUESTIONNAIRE_ID]}**' comprises **{first_example[NUMBER_OF_QUESTIONS]}** questions, exhibiting the highest match percentage at **{first_example[PERCENT_MATCHES]}%**. This reflects that **{first_example[PERCENT_MATCHES]}%** of its questions have semantically similar content (as defined by the filter criteria) in at least one other questionnaire, indicating a significant potential for data harmonization. This questionnaire matches with the following **{len(list(first_example[QUESTIONNAIRE_MATCHES]))}** questionnaires: (**{", ".join(list(first_example[QUESTIONNAIRE_MATCHES]))}**).
+    Among the questionnaires presented, '**{first_example[QUESTIONNAIRE_ID]}**' comprises **{first_example[NUMBER_OF_QUESTIONS]}** questions, exhibiting the highest semantic coverage, meaning that **{first_example[PERCENT_MATCHES]}%** of the questions have a similar content (as defined by the filter criteria) in an other questionnaire, indicating a significant potential for data harmonization. The '**{first_example[QUESTIONNAIRE_ID]}**' questionnaire has semantic similar content with the following **{len(list(first_example[QUESTIONNAIRE_MATCHES]))}** questionnaires: (**{", ".join(list(first_example[QUESTIONNAIRE_MATCHES]))}**).
 
     A **100% match rate** indicates that every question finds a corresponding match in another questionnaire, denoting a full potential for data harmonization.
 
@@ -406,26 +406,41 @@ def render_match_view():
     """)
 
 
-def show_explore_tab():
-    if st.session_state.get('similarity') is None:
-        st.info('You have to select data and build embeddings for viewing similarity')
-        return
+def main_explore_tab():
 
     sim_container = st.container()
     df_sim = st.session_state['similarity']
 
-    # New section for pre-filtering with a Radio button
-    filter_threshold = sim_container.radio("Filter by similarity score:",
-                                           ["No filter", "Apply filter (>= 0.5)", "Apply filter (>= 0.75)"], index=0, horizontal=True)
-
-    if filter_threshold == "Apply filter (>= 0.5)":
-        df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= 0.5]
-
-    if filter_threshold == "Apply filter (>= 0.75)":
-        df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= 0.75]
-
     with sim_container.expander("Filtering"):
+
         st.subheader('Filter tree')
+        quartiles = st.session_state.similarity[SIMILARITY_SCORE].quantile([0.5, 0.75, 0.9])
+
+        # Define the labels for the radio buttons dynamically based on quartile values.
+        filter_options = [
+            "No filter",
+            f"Apply median filter (>= {quartiles[0.5]:.2f})",  # Label for median value
+            f"Apply 3. quartiles filter (>= {quartiles[0.75]:.2f})",  # Label for 75th percentile value,
+            f"Apply 9. quartiles filter (>= {quartiles[0.9]:.2f})"  # Label for 75th percentile value
+        ]
+
+        # Create a new section for pre-filtering with a Radio button
+        filter_threshold = st.radio("Filter by similarity score:",
+                                    options=filter_options,
+                                    index=0,
+                                    key="radio_1",
+                                    horizontal=True)
+
+        # Logic to apply the filter based on the selected threshold
+        if filter_threshold != filter_options[0]:
+            # Extract the numeric value from the chosen filter option.
+            threshold_value = float(filter_threshold.split('>= ')[1].rstrip(')'))
+            # Apply the filter to your data.
+            df_sim = df_sim[df_sim[SIMILARITY_SCORE] >= threshold_value]
+        else:
+            # If no filter is selected, use the original data.
+            df_sim = df_sim
+
         # Now df_sim is either filtered or unfiltered based on the Radio selection
         st.session_state['df_filtered'] = dataframe_explorer(df_sim, case=False)
         st.data_editor(st.session_state['df_filtered'], use_container_width=True, column_config={
@@ -438,7 +453,7 @@ def show_explore_tab():
             ),
         }, key="Filtering")
 
-        st.subheader('Filtered DataFrame')
+        st.subheader('Filtered Table')
         size = len(st.session_state['df_filtered'])
         st.info(f"Filtered {size} elements")
 
