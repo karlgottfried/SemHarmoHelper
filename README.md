@@ -49,9 +49,8 @@ Sure, I'll provide the installation and running instructions in English, formatt
 ---
 ## Installation and Running Instructions
 
-To start the application, you need to ensure Docker is installed on your system as the application is run within a Docker container. Follow these steps to install and run the application:
-
 ### 1. Docker
+To start the application, you need to ensure Docker is installed on your system as the application is run within a Docker container. Follow these steps to install and run the application:
 
 ### Prerequisites:
 - Ensure Docker is installed on your system. If not, download and install Docker from the [official Docker website](https://docs.docker.com/get-docker/).
