@@ -1,5 +1,3 @@
-
-
 # Semantic Similarity Detection in Multi-Item Questionnaires with HarmoHelper
 
 The "SemHarmoHelper" repository features an application that helps in the detection of semantic similarity within multi-item questionnaires, aimed at facilitating the data harmonization process. It provides a workflow overview, UI overview, script features, and an about section describing its functionalities, such as data import, environment setup, Streamlit integration, data upload functionality, sentence embedding, similarity calculation, and more. 
@@ -49,13 +47,11 @@ Overall, this script seems ideal for researchers and data analysts looking to ha
 Sure, I'll provide the installation and running instructions in English, formatted in Markdown:
 
 ---
-
 ## Installation and Running Instructions
 
 To start the application, you need to ensure Docker is installed on your system as the application is run within a Docker container. Follow these steps to install and run the application:
 
-
-
+### 1. Docker
 
 ### Prerequisites:
 - Ensure Docker is installed on your system. If not, download and install Docker from the [official Docker website](https://docs.docker.com/get-docker/).
@@ -92,3 +88,38 @@ To start the application, you need to ensure Docker is installed on your system 
 By following these steps, you can locally install and run the "Semantic Similarity Detection in Multi-Item Questionnaires with HarmoHelper" application on your computer.
 
 ---
+
+### 2. Python
+
+1. Clone the repository:
+
+```
+git clone https://github.com/karlgottfried/SemHarmoHelper.git
+```
+
+2. Install the required dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+3. Go to the `SemHarmoHelper` folder:
+
+```
+cd SemHarmoHelper/
+```
+
+3. Run the app:
+```
+streamlit run Harmo_Helper.py
+```
+
+4. Access the app in your browser at http://localhost:8501
+
+## Technologies Used
+
+The prototype was built using Streamlit.
+
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+<img src="https://user-images.githubusercontent.com/66017329/223900076-e1d5c1e5-7c4d-4b73-84e7-ae7d66149bc6.png" alt="streamlit" width="120">
+
